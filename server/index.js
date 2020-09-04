@@ -2,31 +2,18 @@ const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
 const multer = require('multer');
-const fs = require('fs');
 const db = require('../database');
-const handlePDF = require('../process');
 const bulk = require('../process/bulk');
 
 const app = express();
-app.use(express.json());
 app.use(bodyParser());
 app.use(express.static('dist'));
 
 const storage = multer.diskStorage({
   destination(req, file, cb) {
-    cb(null, 'uploads');
+    cb(null, '/Users/carlitoswillis/local/programming/expert/uploads/');
   },
   filename(req, file, cb) {
-    const keys = Object.keys(req.body);
-    req.body.extraInfo = { fileName: file.originalname.split(' ').join('_') };
-    const { extraInfo } = req.body;
-    req.body.sourceKeys = { fileName: file.originalname };
-    extraInfo.filePath = path.resolve(__dirname, '..', 'uploads', extraInfo.fileName);
-    keys.forEach((key) => {
-      req.body.sourceKeys[key] = req.body[key];
-    });
-    req.body.sourceKeys.created = new Date().toDateString();
-    console.log(file.originalname);
     cb(null, file.originalname);
   },
 });
@@ -38,6 +25,7 @@ const upload = multer({
 app.route('/sources')
   .post((req, res) => {
     upload(req, res, (err) => {
+      // console.log(req.body);
       if (err) {
         res.send(err);
       } else {
@@ -45,7 +33,7 @@ app.route('/sources')
         //   fs.unlinkSync(req.body.extraInfo.filePath);
         //   console.log('processed!');
         // });
-        bulk(null, () => console.log('aye'));
+        bulk(null, () => console.log('done for real'));
         res.send('Success, uploaded!');
       }
     });

@@ -1,0 +1,13 @@
+sudo: required
+dist: trusty
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install -y python3
+  - sudo apt-get install -y libreoffice --no-install-recommends
+  - sudo apt-get install -y unoconv
+language: node_js
+node_js:
+  - 0.12
+  - 4.0
+  - 5.0
+  - 6.0
