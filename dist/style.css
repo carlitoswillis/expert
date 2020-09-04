@@ -1,0 +1,21 @@
+.pagination {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  list-style: none;
+  margin-bottom: 20px;
+}
+
+.pagination a {
+  color: black;
+  /* background-color: rgba(53, 158, 176, 0.194);; */
+  text-align: center;
+  /* border-radius: 3px; */
+  /* box-shadow: 2px 2px 3px  rgb(128, 128, 128); */
+  font-size: 12pt;
+}
+
+.pagination a:hover {
+  color: grey;
+  cursor: pointer;
+}
