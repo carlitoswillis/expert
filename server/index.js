@@ -5,6 +5,7 @@ const multer = require('multer');
 const fs = require('fs');
 const db = require('../database');
 const handlePDF = require('../process');
+const bulk = require('../process/bulk');
 
 const app = express();
 app.use(express.json());
@@ -25,13 +26,14 @@ const storage = multer.diskStorage({
       req.body.sourceKeys[key] = req.body[key];
     });
     req.body.sourceKeys.created = new Date().toDateString();
-    cb(null, req.body.extraInfo.fileName);
+    console.log(file.originalname);
+    cb(null, file.originalname);
   },
 });
 
 const upload = multer({
   storage,
-}).single('myFile');
+}).array('myFile');
 
 app.route('/sources')
   .post((req, res) => {
@@ -39,10 +41,11 @@ app.route('/sources')
       if (err) {
         res.send(err);
       } else {
-        handlePDF({ info: req.body.sourceKeys, extraInfo: req.body.extraInfo }, () => {
-          fs.unlinkSync(req.body.extraInfo.filePath);
-          console.log('processed!');
-        });
+        // handlePDF({ info: req.body.sourceKeys, extraInfo: req.body.extraInfo }, () => {
+        //   fs.unlinkSync(req.body.extraInfo.filePath);
+        //   console.log('processed!');
+        // });
+        bulk(null, () => console.log('aye'));
         res.send('Success, uploaded!');
       }
     });

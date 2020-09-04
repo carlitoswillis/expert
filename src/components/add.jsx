@@ -16,18 +16,33 @@ class FileInput extends React.Component {
       fileInput, title, authors, url, published,
     } = this.state;
     const formData = new FormData(document.getElementById('fileInfo'));
-    formData.append(
-      'myFile',
-      fileInput.current.files[0],
-      fileInput.current.files[0].name,
-    );
-    formData.append(
-      'info',
-      {
-        title, authors, url, published,
-      },
-    );
-    axios.post('sources', formData);
+    if (fileInput.current.files.length > 1) {
+      formData.append(
+        'myFile',
+        fileInput.current.files,
+      );
+      formData.append(
+        'info',
+        {
+          title, authors, url, published,
+        },
+      );
+      axios.post('sources', formData);
+      // axios.post('sources2', formData);
+    } else {
+      formData.append(
+        'myFile',
+        fileInput.current.files[0],
+        fileInput.current.files[0].name,
+      );
+      formData.append(
+        'info',
+        {
+          title, authors, url, published,
+        },
+      );
+      axios.post('sources', formData);
+    }
   }
 
   handleInput(event) {
@@ -41,7 +56,7 @@ class FileInput extends React.Component {
       <form id="fileInfo" onSubmit={this.handleSubmit}>
         <label>
           Upload file
-          <input type="file" ref={this.state.fileInput} />
+          <input type="file" ref={this.state.fileInput} multiple />
         </label>
         <input onChange={this.state.handleInput} id="title" name="title" type="text" placeholder="title" />
         <input onChange={this.state.handleInput} id="authors" name="authors" type="text" placeholder="author/s" />
