@@ -17,10 +17,13 @@ class FileInput extends React.Component {
     } = this.state;
     const formData = new FormData(document.getElementById('fileInfo'));
     if (fileInput.current.files.length > 1) {
-      formData.append(
-        'myFile',
-        fileInput.current.files,
-      );
+      Array.from(fileInput.current.files).forEach(file => {
+        formData.append(
+          'myFile',
+          file,
+          file.name,
+        );
+      });
       formData.append(
         'info',
         {
