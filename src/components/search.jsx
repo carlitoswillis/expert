@@ -57,6 +57,44 @@ class Search extends React.Component {
     this.setState({ query });
   }
 
+  removeSource(id) {
+    const {
+      url, page, query, perPage,
+    } = this.state;
+    $.ajax({
+      url: `${url}?page=${page}&limit=${perPage}`.concat(`${query ? `&q=${query}` : ''}`),
+      type: 'DELETE',
+      data: { id },
+      success: (data) => {
+        this.setState({
+          sources: [...data.results],
+        });
+      },
+      error: (xhr, status, err) => {
+        console.error(this.props.url, status, err.toString());
+      },
+    });
+  }
+
+  updateSource(updatedSource) {
+    const {
+      url, page, query, perPage,
+    } = this.state;
+    $.ajax({
+      url: `${url}?page=${page}&limit=${perPage}`.concat(`${query ? `&q=${query}` : ''}`),
+      type: 'PUT',
+      data: updatedSource,
+      success: (data) => {
+        this.setState({
+          sources: [...data.results],
+        });
+      },
+      error: (xhr, status, err) => {
+        console.error(err.toString());
+      },
+    });
+  }
+
   render() {
     const { sources, pageCount } = this.state;
     return (
@@ -65,7 +103,11 @@ class Search extends React.Component {
           <input className="query" id="query" onChange={this.handleChange.bind(this)} placeholder="search for something" />
           <button onClick={this.handleSubmit.bind(this)} className="submitButton" type="submit">Search</button>
           <ul className="sourceList">
-            <Sources sources={sources} />
+            <Sources
+              sources={[...sources]}
+              removeSource={this.removeSource.bind(this)}
+              updateSource={this.updateSource.bind(this)}
+            />
           </ul>
         </div>
         <ReactPaginate

@@ -52,7 +52,8 @@ module.exports = ({ info, extraInfo }, callback) => {
               db.create(entry, (createErr, result2) => {
                 if (createErr) throw createErr;
                 fs.unlinkSync(jsonPath);
-                fs.unlinkSync(choppedPath);
+                if (!notChopped) fs.unlinkSync(choppedPath);
+                fs.unlinkSync(filePath);
                 callback(null, result2);
               });
             });
@@ -64,6 +65,7 @@ module.exports = ({ info, extraInfo }, callback) => {
         db.create(entry, (createErr, result2) => {
           if (createErr) throw createErr;
           fs.unlinkSync(textFilePath);
+          fs.unlinkSync(filePath);
           callback(null, result2);
         });
       }
@@ -77,6 +79,7 @@ module.exports = ({ info, extraInfo }, callback) => {
         db.create(entry, (createErr, result3) => {
           if (createErr) throw createErr;
           fs.unlinkSync(jsonPath);
+          fs.unlinkSync(filePath);
           callback(null, result3);
         });
       });

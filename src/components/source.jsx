@@ -2,27 +2,41 @@
 import React from 'react';
 import SourceModal from './sourcemodal';
 
+const $ = require('jquery');
+
 class Source extends React.Component {
   constructor(props) {
     super(props);
     const { source } = props;
+    const { removeSource, updateSource } = props;
     this.state = { source, shown: false };
   }
 
   show(e) {
+    e.preventDefault();
+    e.stopPropagation();
     if (e.target.className.includes('source')) {
       this.setState({ shown: true });
     }
   }
 
-  unShow() {
+  unShow(e) {
+    e.preventDefault();
+    e.stopPropagation();
     this.setState({ shown: false });
+  }
+
+  showNewSourceData(updatedSource) {
+    const { source } = this.state;
+    this.setState({ source: { ...source, ...updatedSource }, shown: false });
   }
 
   render() {
     const { source, shown } = this.state;
+    const { updateSource, removeSource } = this.props;
     return (
       <li onClick={this.show.bind(this)} className="source" key={source.id}>
+        <br></br>
         <div>
           <h2 className="sourceTitle">
             {source.title || source.fileName}
@@ -48,9 +62,18 @@ class Source extends React.Component {
             )
             : <></>}
           {shown
-            ? <SourceModal source={source} unShow={this.unShow.bind(this)} />
+            ? (
+              <SourceModal
+                key={source.id}
+                source={source}
+                removeSource={removeSource}
+                unShow={this.unShow.bind(this)}
+                updateSource={(x) => { updateSource(x); this.showNewSourceData(x); }}
+              />
+            )
             : <></>}
         </div>
+        _____________________________________________
       </li>
     );
   }

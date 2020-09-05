@@ -43,8 +43,31 @@ const create = (info, callback) => {
     callback(null, result);
   });
 };
-const update = () => {};
-const deleteResource = () => {};
+
+const update = (info, callback) => {
+  const columns = Object.keys(info);
+  const values = columns.map((x) => info[x]);
+  let qstring = '';
+  columns.forEach((x) => {
+    qstring += `${x} = '${info[x]}', `;
+  });
+  qstring = qstring.slice(0, qstring.length - 2);
+  const query = `UPDATE sources SET ${qstring} WHERE id = '${info.id}'`;
+  con.query(query, values, (err, result) => {
+    if (err) throw err;
+    callback(null, result);
+  });
+};
+
+const deleteResource = ({ id, query }, callback) => {
+  con.query('DELETE from sources where id = ?', [id], (err) => {
+    if (err) throw err;
+    readAll(query, (e2, results) => {
+      if (e2) throw e2;
+      callback(null, results);
+    });
+  });
+};
 
 module.exports = {
   create, readAll, update, deleteResource,
