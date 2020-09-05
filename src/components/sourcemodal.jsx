@@ -7,7 +7,7 @@ const { useState } = React;
 
 const SourceModal = ({ source, unShow, updateSource, removeSource }) => {
   // const [editedInfo, updateInfo] = useState({ id: source.id });
-  const keys = ['authors', 'title', 'url', 'fileID', 'driveLink'];
+  const keys = ['authors', 'title', 'url', 'driveLink'];
   const handleSubmit = (e) => {
     e.preventDefault();
     e.stopPropagation();
