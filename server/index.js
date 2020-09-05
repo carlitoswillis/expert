@@ -1,7 +1,9 @@
+require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
 const multer = require('multer');
+const fs = require('fs');
 const db = require('../database');
 const bulk = require('../process/bulk');
 
@@ -11,7 +13,11 @@ app.use(express.static('dist'));
 
 const storage = multer.diskStorage({
   destination(req, file, cb) {
-    cb(null, '/Users/carlitoswillis/local/programming/expert/uploads/');
+    if (!req.uploadPath) {
+      req.uploadPath = req.uploadPath || path.resolve(__dirname, '..', 'uploads', `${new Date().getTime()}`);
+      fs.mkdirSync(req.uploadPath);
+    }
+    cb(null, req.uploadPath);
   },
   filename(req, file, cb) {
     cb(null, file.originalname);
@@ -33,7 +39,7 @@ app.route('/sources')
         //   fs.unlinkSync(req.body.extraInfo.filePath);
         //   console.log('processed!');
         // });
-        bulk(null, () => console.log('done for real'));
+        bulk(req.uploadPath, null, () => console.log('done for real'));
         res.send('Success, uploaded!');
       }
     });
@@ -45,10 +51,24 @@ app.route('/sources')
     });
   })
   .put((req, res) => {
-    res.end('you are not authorized');
+    console.log('hey');
+    db.update({ ...req.body }, (err) => {
+      if (err) throw err;
+      db.readAll(req.query, (err2, results) => {
+        if (err2) throw err2;
+        res.send(results);
+      });
+    });
   })
   .delete((req, res) => {
-    res.end('you are not authorized');
+    db.readAll(req.query, (err, results) => {
+      if (err) throw err;
+      res.send(results);
+    });
+    // db.deleteResource({ id: req.body.id, query: req.query }, (err, results) => {
+    //   if (err) throw err;
+    //   res.send(results);
+    // });
   });
 
 app.get('*', (req, res) => {

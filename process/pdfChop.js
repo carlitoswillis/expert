@@ -24,28 +24,31 @@ const funky = async (i, idx, sourcePDF, targetDoc) => {
 };
 
 const chop = async (targetPath, callback) => {
-  // callback(null, true);
-  const uint8Array = fs.readFileSync(targetPath);
-  const sourcePDF = await PDFDocument.load(uint8Array);
-  const pdfDoc2 = await PDFDocument.create();
+  if (false) {
+    callback(null, true);
+  } else {
+    const uint8Array = fs.readFileSync(targetPath);
+    const sourcePDF = await PDFDocument.load(uint8Array);
+    const pdfDoc2 = await PDFDocument.create();
 
-  const copiedPages = new Array(sourcePDF.getPages().length).fill(0);
-  const promises = [];
-  copiedPages.forEach((page, index) => {
-    for (let i = 0; i < 4; i += 1) {
-      promises.push(funky(i, index, sourcePDF, pdfDoc2));
-    }
-  });
-  Promise.all(promises)
-    .then(() => {
-      const go = async () => {
-        const pdfBytes = await pdfDoc2.save();
-        fs.writeFileSync(path.resolve(__dirname, '..', 'uploads', `${targetPath.split('/').pop().replace('.pdf', '_')}chopped.pdf`), pdfBytes);
-        console.log('chopped pdf into quartiles');
-        callback(null);
-      };
-      go();
+    const copiedPages = new Array(sourcePDF.getPages().length).fill(0);
+    const promises = [];
+    copiedPages.forEach((page, index) => {
+      for (let i = 0; i < 4; i += 1) {
+        promises.push(funky(i, index, sourcePDF, pdfDoc2));
+      }
     });
+    Promise.all(promises)
+      .then(() => {
+        const go = async () => {
+          const pdfBytes = await pdfDoc2.save();
+          fs.writeFileSync(path.resolve(__dirname, '..', 'uploads', `${targetPath.split('/').pop().replace('.pdf', '_')}chopped.pdf`), pdfBytes);
+          console.log('chopped pdf into quartiles');
+          callback(null);
+        };
+        go();
+      });
+  }
 };
 
 module.exports = chop;
