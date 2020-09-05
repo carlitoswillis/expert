@@ -4,6 +4,7 @@ const path = require('path');
 const bodyParser = require('body-parser');
 const multer = require('multer');
 const fs = require('fs');
+const get = require('../process/drive/getFile');
 const db = require('../database');
 const bulk = require('../process/bulk');
 
@@ -61,15 +62,27 @@ app.route('/sources')
     });
   })
   .delete((req, res) => {
-    db.readAll(req.query, (err, results) => {
-      if (err) throw err;
-      res.send(results);
-    });
-    // db.deleteResource({ id: req.body.id, query: req.query }, (err, results) => {
-    //   if (err) throw err;
-    //   res.send(results);
-    // });
+    const me = false;
+    if (!me) {
+      db.readAll(req.query, (err, results) => {
+        if (err) throw err;
+        res.send(results);
+      });
+    } else {
+      db.deleteResource({ id: req.body.id, query: req.query }, (err, results) => {
+        if (err) throw err;
+        res.send(results);
+      });
+    }
   });
+
+app.post('/file', (req, res) => {
+  const { fileName, fileID } = req.body;
+  get({ fileName, fileID }, (data) => {
+    console.log(data);
+    res.end();
+  });
+});
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));

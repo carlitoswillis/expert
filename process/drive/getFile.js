@@ -34,7 +34,7 @@ const getAccessToken = (oAuth2Client, callback) => {
   });
 };
 
-const authorize = (credentials, callback) => {
+const authorize = (credentials, callback, { fileName, fileID }, cb) => {
   const { client_secret, client_id, redirect_uris } = credentials;
   const oAuth2Client = new google.auth.OAuth2(
     client_id, client_secret, redirect_uris[0],
@@ -44,35 +44,47 @@ const authorize = (credentials, callback) => {
   fs.readFile(TOKEN_PATH, (err, token) => {
     if (err) return getAccessToken(oAuth2Client, callback);
     oAuth2Client.setCredentials(JSON.parse(token));
-    callback(oAuth2Client);
+    callback(oAuth2Client, { fileName, fileID }, cb);
   });
 };
 
-const uploadFile = (auth) => {
+const getFile = (auth, { fileName, fileID }, cb) => {
   const drive = google.drive({ version: 'v3', auth });
-  const fileMetadata = {
-    name: 'test.pdf',
-  };
-  const media = {
-    mimeType: 'application/pdf',
-    body: fs.createReadStream(path.resolve(__dirname, '..', '..', 'test.pdf')),
-    // parents: [folderId]
-  };
-  drive.files.create({
-    resource: fileMetadata,
-    media,
-    fields: 'id',
-  }, (err, file) => {
-    if (err) {
-      // Handle error
-      console.error(err);
-    } else {
-      console.log(file.data);
-    }
-  });
+  drive.files
+    .get({ fileId: fileID, alt: 'media' }, { responseType: 'stream' })
+    .then((res) => new Promise((resolve, reject) => {
+      const filePath = path.resolve(__dirname, '..', '..', 'dist', `${fileName}`);
+      console.log(`writing to ${filePath}`);
+      const dest = fs.createWriteStream(filePath);
+      let progress = 0;
+
+      res.data
+        .on('end', () => {
+          console.log('Done downloading file.');
+          resolve(filePath);
+        })
+        .on('error', (err) => {
+          console.error('Error downloading file.');
+          reject(err);
+        })
+        .on('data', (d) => {
+          progress += d.length;
+          if (process.stdout.isTTY) {
+            process.stdout.clearLine();
+            process.stdout.cursorTo(0);
+            process.stdout.write(`Downloaded ${progress} bytes`);
+          }
+        })
+        .pipe(dest);
+    }))
+    .then((res) => {
+      cb(res);
+    });
 };
 
-fs.readFile(path.resolve(__dirname, 'credentials.json'), (err, content) => {
-  if (err) return console.log('Error loading client secret file:', err);
-  authorize(JSON.parse(content.toString()).web, uploadFile);
-});
+module.exports = ({ fileName, fileID }, cb) => {
+  fs.readFile(path.resolve(__dirname, 'credentials.json'), (err, content) => {
+    if (err) return console.log('Error loading client secret file:', err);
+    authorize(JSON.parse(content.toString()).web, getFile, { fileName, fileID }, cb);
+  });
+};
