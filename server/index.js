@@ -11,6 +11,10 @@ const bulk = require('../process/bulk');
 const app = express();
 app.use(bodyParser());
 app.use(express.static('dist'));
+// app.use(express.static('dist'), (req, res, cb) => {
+//   // if (req.headers.referer ? req.headers.referer.toLowerCase().includes('.pdf') : false) fs.unlinkSync(path.resolve(__dirname, '..', 'dist', req.headers.referer.split('/').pop()));
+//   cb();
+// });
 
 const storage = multer.diskStorage({
   destination(req, file, cb) {
@@ -83,10 +87,16 @@ app.post('/file', (req, res) => {
     res.end();
   });
 });
+app.delete('/file', (req, res) => {
+  const { fileName } = req.body;
+  fs.unlinkSync(path.resolve(__dirname, '..', 'dist', fileName));
+  res.end();
+});
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
 });
+
 app.listen(3000, (err) => {
   if (err) throw err;
   else console.log('http://localhost:3000');

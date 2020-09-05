@@ -51,6 +51,26 @@ class Source extends React.Component {
     });
   }
 
+  removeLink(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const { source } = this.state;
+    const { fileName } = source;
+    $.ajax({
+      url: '/file',
+      type: 'DELETE',
+      data: { fileName },
+      success: () => {
+        this.setState({
+          loaded: false,
+        });
+      },
+      error: (xhr, status, err) => {
+        console.error(this.props.url, status, err.toString());
+      },
+    });
+  }
+
   render() {
     const { source, shown, loaded } = this.state;
     const { updateSource, removeSource } = this.props;
@@ -85,6 +105,7 @@ class Source extends React.Component {
             ? (
               <p>
                 <a href={source.fileName} rel="noreferrer" target="_blank">view file</a>
+                <button type="button" onClick={this.removeLink.bind(this)}>removeFile</button>
               </p>
             )
             : <button type="button" onClick={this.loadDriveLink.bind(this)}>loadDriveLink</button>}
