@@ -24,7 +24,7 @@ const funky = async (i, idx, sourcePDF, targetDoc) => {
 };
 
 const chop = async (targetPath, callback) => {
-  callback(null, true);
+  // callback(null, true);
   const uint8Array = fs.readFileSync(targetPath);
   const sourcePDF = await PDFDocument.load(uint8Array);
   const pdfDoc2 = await PDFDocument.create();

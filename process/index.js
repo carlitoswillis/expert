@@ -9,7 +9,6 @@ const db = require('../database');
 
 module.exports = ({ info, extraInfo }, callback) => {
   const { fileName, filePath } = extraInfo;
-  console.log('hey there', filePath);
   const title = info.title || fileName;
   text(filePath, (err2, data) => {
     if (err2) {
