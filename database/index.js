@@ -1,7 +1,7 @@
 const con = require('./myConfig');
 
 const getCount = (query, callback) => {
-  const qstr = query.replace('*', 'count(*)');
+  const qstr = query.replace('id, authors, title, created, published, url, fileID, fileName', 'count(*)');
   con.query(qstr, (err, result) => {
     if (err) throw err;
     callback(null, result);
@@ -11,7 +11,7 @@ const getCount = (query, callback) => {
 const readAll = (query, callback) => {
   const { limit, page, q } = query;
   const offset = page * limit;
-  let qstr = 'select * from sources';
+  let qstr = 'select id, authors, title, created, published, url, fileID, fileName from sources';
   let qforcount = qstr;
   if (q) {
     const addStr = !q.includes(':')
