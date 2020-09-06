@@ -65,6 +65,7 @@ class FileInput extends React.Component {
         <input onChange={this.state.handleInput} id="authors" name="authors" type="text" placeholder="author/s" />
         <input onChange={this.state.handleInput} id="url" name="url" type="text" placeholder="url" />
         <input onChange={this.state.handleInput} id="published" name="published" type="text" placeholder="date published" />
+        <input onChange={this.state.handleInput} id="course" name="course" type="text" placeholder="course" />
         {/* <br /> */}
         <button type="submit">Upload</button>
       </form>
