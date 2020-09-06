@@ -6,7 +6,7 @@ const conv = util.promisify(require('./convppt'));
 
 const hp2 = util.promisify(handlePDF);
 const prep = async (folderPath, course, callback) => {
-  await conv();
+  await conv(folderPath);
   // const folderPath = path.resolve(__dirname, '..', 'uploads');
   fs.readdir(folderPath, (err, files) => {
     if (err) throw err;
