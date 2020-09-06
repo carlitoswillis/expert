@@ -44,7 +44,7 @@ app.route('/sources')
         //   fs.unlinkSync(req.body.extraInfo.filePath);
         //   console.log('processed!');
         // });
-        bulk(req.uploadPath, null, () => console.log('done for real'));
+        bulk(req.uploadPath, req.body.course || null, () => console.log('done for real'));
         res.send('Success, uploaded!');
       }
     });
@@ -56,7 +56,6 @@ app.route('/sources')
     });
   })
   .put((req, res) => {
-    console.log('hey');
     db.update({ ...req.body }, (err) => {
       if (err) throw err;
       db.readAll(req.query, (err2, results) => {
