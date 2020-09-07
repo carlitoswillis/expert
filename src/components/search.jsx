@@ -7,11 +7,18 @@ const $ = require('jquery');
 class Search extends React.Component {
   constructor(props) {
     super(props);
+    const searchParams = {};
+    const s = new URLSearchParams(window.location.search);
+    s.forEach((value, key) => {
+      searchParams[key] = value;
+    });
+
     this.state = {
       url: '/sources',
       sources: [],
-      page: 0,
-      perPage: 10,
+      page: searchParams.page || 0,
+      perPage: searchParams.limit || 10,
+      searchParams,
     };
   }
 
@@ -22,11 +29,13 @@ class Search extends React.Component {
   loadDataFromServer() {
     window.scrollTo(0, 0);
     const {
-      url, page, query, perPage,
+      url, page, query, perPage, searchParams,
     } = this.state;
+    const searchString = Object.keys(searchParams).filter((x) => !['page', 'limit'].includes(x))
+      .map((key) => `${key}=${searchParams[key]}`).join('&');
 
     $.ajax({
-      url: `${url}?page=${page}&limit=${perPage}`.concat(`${query ? `&q=${query}` : ''}`),
+      url: `${url}?page=${page}&limit=${perPage}`.concat(query ? `&q=${query}` : `&${searchString}`),
       type: 'GET',
       success: (data) => {
         this.setState({
@@ -95,33 +104,57 @@ class Search extends React.Component {
   }
 
   render() {
-    const { sources, pageCount } = this.state;
+    const {
+      sources, pageCount, query, searchParams,
+    } = this.state;
     return (
       <div className="search">
         <div className="sources">
-          <input className="query" id="query" onChange={this.handleChange.bind(this)} placeholder="search for something" />
-          <button onClick={this.handleSubmit.bind(this)} className="submitButton" type="submit">Search</button>
-          <ul className="sourceList">
-            <Sources
-              sources={[...sources]}
-              removeSource={this.removeSource.bind(this)}
-              updateSource={this.updateSource.bind(this)}
-            />
-          </ul>
+          {window.location.href !== 'http://localhost:3000/library'
+            ? (
+              <>
+                <input className="query" id="query" onChange={this.handleChange.bind(this)} placeholder="search for something" />
+                <a
+                  href={`${window.location.origin}/search${query ? `?q=${query}` : ''}`}
+                >
+                  <button
+              // onClick={this.handleSubmit.bind(this)}
+                    className="submitButton"
+                    type="submit"
+                  >
+                    Search
+                  </button>
+                </a>
+              </>
+            )
+            : <></>}
+          {window.location.href === 'http://localhost:3000/library' || Object.keys(searchParams).length
+            ? (
+              <>
+                <ul className="sourceList">
+                  <Sources
+                    sources={[...sources]}
+                    removeSource={this.removeSource.bind(this)}
+                    updateSource={this.updateSource.bind(this)}
+                  />
+                </ul>
+                <ReactPaginate
+                  previousLabel="previous"
+                  nextLabel="next"
+                  breakLabel="..."
+                  breakClassName="break-me"
+                  pageCount={pageCount}
+                  marginPagesDisplayed={2}
+                  pageRangeDisplayed={5}
+                  onPageChange={this.handlePageClick.bind(this)}
+                  containerClassName="pagination"
+                  subContainerClassName="pagespagination"
+                  activeClassName="active"
+                />
+              </>
+            )
+            : (<></>)}
         </div>
-        <ReactPaginate
-          previousLabel="previous"
-          nextLabel="next"
-          breakLabel="..."
-          breakClassName="break-me"
-          pageCount={pageCount}
-          marginPagesDisplayed={2}
-          pageRangeDisplayed={5}
-          onPageChange={this.handlePageClick.bind(this)}
-          containerClassName="pagination"
-          subContainerClassName="pagespagination"
-          activeClassName="active"
-        />
       </div>
     );
   }

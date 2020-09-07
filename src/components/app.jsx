@@ -3,7 +3,6 @@ import React from 'react';
 
 import Nav from './nav';
 import Search from './search';
-import Libary from './library';
 import Add from './add';
 
 const App = () => (
@@ -23,7 +22,7 @@ const App = () => (
         <Switch>
           <Route path="/search" component={Search} />
           <Route path="/add" component={Add} />
-          <Route path="/library" component={Libary} />
+          <Route path="/library" component={Search} />
           <Route path="/" component={Search} />
         </Switch>
       </div>
