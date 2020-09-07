@@ -18,8 +18,11 @@ module.exports = (folderPath, cb) => {
           // pagerange: null, // specified page range to be converted, example: '1' or '1-2'
         };
         // eslint-disable-next-line no-await-in-loop
-        await p2p(path.resolve(folderPath, file), options);
+        console.log('starting to convert', file);
+        await p2p(path.resolve(folderPath, file), options)
+          .catch(err => { throw err; });
         console.log('done with', file);
+        console.log('removing...');
         fs.unlinkSync(path.resolve(folderPath, file));
       }
       console.log('finished converting from ppt to pdf');
