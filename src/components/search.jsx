@@ -112,20 +112,20 @@ class Search extends React.Component {
         <div className="sources">
           {window.location.href !== 'http://localhost:3000/library'
             ? (
-              <>
-                <input className="query" id="query" onChange={this.handleChange.bind(this)} placeholder="search for something" />
+              <div className="searchbar">
+                <input className="query" id="query" onChange={this.handleChange.bind(this)} placeholder="search for something" defaultValue={searchParams ? searchParams.q || '' : ''} />
                 <a
                   href={`${window.location.origin}/search${query ? `?q=${query}` : ''}`}
                 >
                   <button
               // onClick={this.handleSubmit.bind(this)}
                     className="submitButton"
-                    type="submit"
+                    type="button"
                   >
                     Search
                   </button>
                 </a>
-              </>
+              </div>
             )
             : <></>}
           {window.location.href === 'http://localhost:3000/library' || Object.keys(searchParams).length
