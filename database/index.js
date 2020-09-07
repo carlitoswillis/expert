@@ -15,7 +15,7 @@ const readAll = (query, callback) => {
   let qforcount = qstr;
   if (q) {
     const addStr = !q.includes(':')
-      ? ` where content like '%${q}%' or title like '%${q}%' or authors like '%${q}%'`
+      ? ` where content like '%${q}%' or title like '%${q}%' or authors like '%${q}%' or fileName like '%${q}%'`
       : ` where ${q.split(':')[0]} like '%${q.split(':')[1]}%'`;
     qstr = qstr.concat(addStr);
     qforcount = qforcount.concat(addStr);
