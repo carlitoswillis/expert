@@ -9,18 +9,26 @@ const getCount = (query, callback) => {
 };
 
 const readAll = (query, callback) => {
-  const { limit, page, q } = query;
+  console.log(query);
+  const {
+    limit, page, q, authors, title, fileName, content,
+  } = query;
   const offset = page * limit;
   let qstr = 'select id, authors, title, created, published, url, fileID, fileName from sources';
   let qforcount = qstr;
+  let addStr = '';
   if (q) {
-    const addStr = !q.includes(':')
-      ? ` where content like '%${q}%' or title like '%${q}%' or authors like '%${q}%' or fileName like '%${q}%'`
-      : ` where ${q.split(':')[0]} like '%${q.split(':')[1]}%'`;
-    qstr = qstr.concat(addStr);
-    qforcount = qforcount.concat(addStr);
+    addStr = ` where content like '%${q}%' or title like '%${q}%' or authors like '%${q}%' or fileName like '%${q}%'`;
+  } else {
+    const parts = [['authors', authors], ['title', title], ['fileName', fileName], ['content', content]];
+    const qstrA = [];
+    parts.forEach((kp) => {
+      if (kp[1]) qstrA.push(`${kp[0]} like '%${kp[1]}%'`);
+    });
+    addStr = qstrA.join(' and ') ? ` where ${qstrA.join(' and ')}` : '';
   }
-  qstr = qstr.concat(` order by id desc limit ${offset}, ${limit}`);
+  qstr = qstr.concat(addStr, ` order by id desc limit ${offset}, ${limit}`);
+  qforcount = qforcount.concat(addStr);
   con.query(qstr, (err, result) => {
     if (err) throw err;
     getCount(qforcount, (ce, count) => {
