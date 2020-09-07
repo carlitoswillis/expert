@@ -32,8 +32,7 @@ class Search extends React.Component {
         this.setState({
           sources: [...data.results],
           pageCount: Math.ceil(data.count / perPage),
-          query: undefined,
-        }, () => { document.getElementById('query').value = ''; });
+        });
       },
       error: (xhr, status, err) => {
         console.error(this.props.url, status, err.toString());
