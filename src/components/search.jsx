@@ -114,7 +114,7 @@ class Search extends React.Component {
     const {
       sources, pageCount, query, searchParams,
     } = this.state;
-    const showResults = window.location.href === 'http://localhost:3000/library' || Object.keys(searchParams).length;
+    const showResults = window.location.href.includes('/library') || Object.keys(searchParams).length;
     return (
       <div className="search">
         <a className={`appName${!showResults ? ' titleCentered' : ''}`} href="/">
@@ -123,7 +123,7 @@ class Search extends React.Component {
           </h1>
         </a>
         <div className="sources">
-          {window.location.href !== 'http://localhost:3000/library'
+          {window.location.href.includes('/library')
             ? (
               <div className={`${!showResults ? ' centered' : 'searchbar'}`}>
                 <input className="query" id="query" onKeyPress={this.handleKeyPress.bind(this)} onChange={this.handleChange.bind(this)} placeholder="search for something" defaultValue={searchParams ? searchParams.q || '' : ''} />
