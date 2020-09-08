@@ -15,11 +15,11 @@ const Nav = () => (
             Library
           </li>
         </Link>
-        <Link to="/add">
+        {/* <Link to="/upload">
           <li>
-            Add Sources
+            Upload
           </li>
-        </Link>
+        </Link> */}
       </ul>
     </div>
   </nav>

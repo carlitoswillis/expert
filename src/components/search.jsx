@@ -84,6 +84,13 @@ class Search extends React.Component {
     });
   }
 
+  handleKeyPress(e) {
+    const { key } = e;
+    if (key === 'Enter') {
+      // this.loadDataFromServer(); // not working
+    }
+  }
+
   updateSource(updatedSource) {
     const {
       url, page, query, perPage,
@@ -107,28 +114,32 @@ class Search extends React.Component {
     const {
       sources, pageCount, query, searchParams,
     } = this.state;
+    const showResults = window.location.href === 'http://localhost:3000/library' || Object.keys(searchParams).length;
     return (
       <div className="search">
+        <a className={`appName${!showResults ? ' titleCentered' : ''}`} href="/">
+          <h1>
+            expert search
+          </h1>
+        </a>
         <div className="sources">
           {window.location.href !== 'http://localhost:3000/library'
             ? (
-              <div className="searchbar">
-                <input className="query" id="query" onChange={this.handleChange.bind(this)} placeholder="search for something" defaultValue={searchParams ? searchParams.q || '' : ''} />
-                <a
-                  href={`${window.location.origin}/search${query ? `?q=${query}` : ''}`}
-                >
+              <div className={`${!showResults ? ' centered' : 'searchbar'}`}>
+                <input className="query" id="query" onKeyPress={this.handleKeyPress.bind(this)} onChange={this.handleChange.bind(this)} placeholder="search for something" defaultValue={searchParams ? searchParams.q || '' : ''} />
+                <a className="buttonLink" href={`${window.location.origin}/search${query ? `?q=${query}` : ''}`}>
                   <button
-              // onClick={this.handleSubmit.bind(this)}
+                  // onClick={this.handleSubmit.bind(this)}
                     className="submitButton"
                     type="button"
                   >
-                    Search
+                    <i className="fa fa-search" />
                   </button>
                 </a>
               </div>
             )
             : <></>}
-          {window.location.href === 'http://localhost:3000/library' || Object.keys(searchParams).length
+          {showResults
             ? (
               <>
                 <ul className="sourceList">
