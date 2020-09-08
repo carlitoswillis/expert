@@ -8,20 +8,11 @@ import Add from './add';
 const App = () => (
   <>
     <Router>
-      <div className="homeDiv">
-        <div className="intro">
-          <div className="menuSplit">
-            <h1 className="title">
-              <a href="/">
-                expert app
-              </a>
-            </h1>
-            <Nav />
-          </div>
-        </div>
+      <Nav />
+      <div className="home">
         <Switch>
           <Route path="/search" component={Search} />
-          <Route path="/add" component={Add} />
+          <Route path="/upload" component={Add} />
           <Route path="/library" component={Search} />
           <Route path="/" component={Search} />
         </Switch>

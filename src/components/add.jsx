@@ -56,26 +56,25 @@ class FileInput extends React.Component {
 
   render() {
     return (
-      <form id="fileInfo" onSubmit={this.handleSubmit}>
-        <label>
-          Upload file
+      <>
+        <p>Upload file</p>
+        <form id="fileInfo" onSubmit={this.handleSubmit}>
           <input type="file" ref={this.state.fileInput} multiple />
-        </label>
-        <input onChange={this.state.handleInput} id="title" name="title" type="text" placeholder="title" />
-        <input onChange={this.state.handleInput} id="authors" name="authors" type="text" placeholder="author/s" />
-        <input onChange={this.state.handleInput} id="url" name="url" type="text" placeholder="url" />
-        <input onChange={this.state.handleInput} id="published" name="published" type="text" placeholder="date published" />
-        <input onChange={this.state.handleInput} id="course" name="course" type="text" placeholder="course" />
-        {/* <br /> */}
-        <button type="submit">Upload</button>
-      </form>
+          <input onChange={this.state.handleInput} id="title" name="title" type="text" placeholder="title" />
+          <input onChange={this.state.handleInput} id="authors" name="authors" type="text" placeholder="author/s" />
+          <input onChange={this.state.handleInput} id="url" name="url" type="text" placeholder="url" />
+          <input onChange={this.state.handleInput} id="published" name="published" type="text" placeholder="date published" />
+          <input onChange={this.state.handleInput} id="course" name="course" type="text" placeholder="course" />
+          {/* <br /> */}
+          <button type="submit">Upload</button>
+        </form>
+      </>
     );
   }
 }
 
 const Add = () => (
-  <div>
-    <p>Add</p>
+  <div className="form-group addFiles">
     <FileInput />
   </div>
 );

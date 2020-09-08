@@ -13,7 +13,7 @@ class Source extends React.Component {
   }
 
   show(e) {
-    if (e.target.className.includes('source')) {
+    if (e.target.className === 'source') {
       e.preventDefault();
       e.stopPropagation();
       this.setState({ shown: true });
@@ -76,14 +76,26 @@ class Source extends React.Component {
     const { updateSource, removeSource } = this.props;
     return (
       <li onClick={this.show.bind(this)} className="source" key={source.id}>
-        <br></br>
         <div>
-          <h2 className="sourceTitle">
-            {source.title || source.fileName}
-          </h2>
-          <h3 className="sourceAuthor">
+          {loaded ? (
+            <div className="result">
+              <a href={source.fileName} rel="noreferrer" target="_blank">
+                <h4 className="sourceTitle">
+                  {source.title ? source.title.replace('.pdf', '') : source.fileName.replace('.pdf', '')}
+                </h4>
+              </a>
+              <button type="button" className="x" onClick={this.removeLink.bind(this)}>X</button>
+            </div>
+          ) : (
+            <a onClick={this.loadDriveLink.bind(this)} href="#" rel="noreferrer" target="_blank">
+              <h4 className="sourceTitle notLoaded">
+                {source.title ? source.title.replace('.pdf', '') : source.fileName.replace('.pdf', '')}
+              </h4>
+            </a>
+          )}
+          <p className="sourceAuthor">
             {source.authors}
-          </h3>
+          </p>
           {source.published
             ? (
               <p className="sourceAuthor">
@@ -101,14 +113,6 @@ class Source extends React.Component {
               </p>
             )
             : <></>}
-          {loaded
-            ? (
-              <p>
-                <a href={source.fileName} rel="noreferrer" target="_blank">view file</a>
-                <button type="button" onClick={this.removeLink.bind(this)}>removeFile</button>
-              </p>
-            )
-            : <button type="button" onClick={this.loadDriveLink.bind(this)}>loadDriveLink</button>}
           {shown
             ? (
               <SourceModal
@@ -121,7 +125,6 @@ class Source extends React.Component {
             )
             : <></>}
         </div>
-        _____________________________________________
       </li>
     );
   }
