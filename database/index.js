@@ -9,7 +9,6 @@ const getCount = (query, callback) => {
 };
 
 const readAll = (query, callback) => {
-  console.log(query);
   const {
     limit, page, q, authors, title, fileName, content,
   } = query;
@@ -57,7 +56,7 @@ const update = (info, callback) => {
   const values = columns.map((x) => info[x]);
   let qstring = '';
   columns.forEach((x) => {
-    qstring += `${x} = '${info[x]}', `;
+    qstring += `${x} = ?, `;
   });
   qstring = qstring.slice(0, qstring.length - 2);
   const query = `UPDATE sources SET ${qstring} WHERE id = '${info.id}'`;
