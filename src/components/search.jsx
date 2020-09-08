@@ -123,7 +123,7 @@ class Search extends React.Component {
           </h1>
         </a>
         <div className="sources">
-          {window.location.href.includes('/library')
+          {!window.location.href.includes('/library')
             ? (
               <div className={`${!showResults ? ' centered' : 'searchbar'}`}>
                 <input className="query" id="query" onKeyPress={this.handleKeyPress.bind(this)} onChange={this.handleChange.bind(this)} placeholder="search for something" defaultValue={searchParams ? searchParams.q || '' : ''} />
