@@ -1,7 +1,7 @@
 # expert search
 
 This search app allow researchers and students to upload PDF documents to a server that will recognize and extract the text for a more relevant research experience.
-This app is meant to narrow down searches to a very specific and academic range, and to compliment the expert/researcher's mind rather than supplement it
+This app is meant to narrow down searches to a very specific and academic range, and to compliment the expert/researcher's mind rather than supplement it.
 
 ## Preview
 
