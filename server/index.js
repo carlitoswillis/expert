@@ -82,7 +82,6 @@ app.route('/sources')
 app.post('/file', (req, res) => {
   const { fileName, fileID } = req.body;
   get({ fileName, fileID }, (data) => {
-    console.log(data);
     res.end();
   });
 });
