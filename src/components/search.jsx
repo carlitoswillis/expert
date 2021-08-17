@@ -83,11 +83,16 @@ class Search extends React.Component {
       },
     });
   }
+  
+  submitted(e) {
+    console.log('hey submitted')
+  }
 
   handleKeyPress(e) {
     const { key } = e;
+    const { query } = this.state;
     if (key === 'Enter') {
-      // this.loadDataFromServer(); // not working
+      window.location.href = `${window.location.origin}/search${query ? `?q=${query}` : ''}`
     }
   }
 
@@ -126,7 +131,7 @@ class Search extends React.Component {
           {!window.location.href.includes('/library')
             ? (
               <div className={`${!showResults ? ' centered' : 'searchbar'}`}>
-                <input className="query" id="query" onKeyPress={this.handleKeyPress.bind(this)} onChange={this.handleChange.bind(this)} placeholder="search for something" defaultValue={searchParams ? searchParams.q || '' : ''} />
+                <input onSubmit={this.submitted} className="query" id="query" onKeyPress={this.handleKeyPress.bind(this)} onChange={this.handleChange.bind(this)} placeholder="search for something" defaultValue={searchParams ? searchParams.q || '' : ''} />
                 <a className="buttonLink" href={`${window.location.origin}/search${query ? `?q=${query}` : ''}`}>
                   <button
                   // onClick={this.handleSubmit.bind(this)}
