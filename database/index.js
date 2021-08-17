@@ -38,7 +38,7 @@ const readAll = (query, callback) => {
 
 const create = (info, callback) => {
   const columns = Object.keys(info);
-  const values = columns.map((x) => info[x]);
+  const values = columns.map((x) => info[x].replace(/[\u0800-\uFFFF]/g, ''));
   let qstring = '';
   columns.forEach(() => {
     qstring += '?, ';
