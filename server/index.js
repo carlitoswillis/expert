@@ -1,101 +1,114 @@
-require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const bodyParser = require('body-parser');
-const multer = require('multer');
 const fs = require('fs');
-const get = require('../process/drive/getFile');
-const db = require('../database');
-const bulk = require('../process/bulk');
+const multer = require('multer');
+
+const config = require('./config');
+const store = require('./store');
+const { extractPdfText } = require('./extract');
 
 const app = express();
-app.use(bodyParser());
-app.use(express.static('dist'));
-// app.use(express.static('dist'), (req, res, cb) => {
-//   // if (req.headers.referer ? req.headers.referer.toLowerCase().includes('.pdf') : false) fs.unlinkSync(path.resolve(__dirname, '..', 'dist', req.headers.referer.split('/').pop()));
-//   cb();
-// });
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-const storage = multer.diskStorage({
-  destination(req, file, cb) {
-    if (!req.uploadPath) {
-      req.uploadPath = req.uploadPath || path.resolve(__dirname, '..', 'uploads', `${new Date().getTime()}`);
-      fs.mkdirSync(req.uploadPath);
-    }
-    cb(null, req.uploadPath);
-  },
-  filename(req, file, cb) {
-    cb(null, file.originalname);
-  },
-});
+// Serve the built Vite client (client/dist) when it exists.
+const clientDist = path.resolve(__dirname, '..', 'client', 'dist');
 
+// --- File uploads -----------------------------------------------------------
+fs.mkdirSync(config.uploadDir, { recursive: true });
 const upload = multer({
-  storage,
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, config.uploadDir),
+    filename: (req, file, cb) => {
+      const safe = file.originalname.replace(/\s+/g, '_');
+      cb(null, `${Date.now()}-${safe}`);
+    },
+  }),
+  limits: { fileSize: 50 * 1024 * 1024 },
 }).array('myFile');
 
-app.route('/sources')
-  .post((req, res) => {
-    upload(req, res, (err) => {
-      // console.log(req.body);
-      if (err) {
-        res.send(err);
-      } else {
-        // handlePDF({ info: req.body.sourceKeys, extraInfo: req.body.extraInfo }, () => {
-        //   fs.unlinkSync(req.body.extraInfo.filePath);
-        //   console.log('processed!');
-        // });
-        bulk(req.uploadPath, req.body.course || null, () => console.log('done for real'));
-        res.send('Success, uploaded!');
+const asyncRoute = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+// --- API --------------------------------------------------------------------
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', store: store.driver, time: new Date().toISOString() });
+});
+
+app.get('/sources', asyncRoute(async (req, res) => {
+  res.json(await store.list(req.query));
+}));
+
+app.get('/sources/:id', asyncRoute(async (req, res) => {
+  const source = await store.get(req.params.id);
+  if (!source) return res.status(404).json({ error: 'not found' });
+  return res.json(source);
+}));
+
+app.post('/sources', (req, res) => {
+  upload(req, res, async (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    try {
+      const files = req.files || [];
+      const { title, authors, url, published, course } = req.body;
+      const created = new Date().toDateString();
+      const records = [];
+
+      for (const file of files) {
+        // eslint-disable-next-line no-await-in-loop
+        const content = await extractPdfText(file.path);
+        const displayName = course ? `${course} – ${file.originalname}` : file.originalname;
+        // eslint-disable-next-line no-await-in-loop
+        const record = await store.create({
+          title: title || file.originalname.replace(/\.pdf$/i, ''),
+          authors: authors || '',
+          url: url || '',
+          published: published || '',
+          fileName: displayName,
+          created,
+          content,
+        });
+        records.push({ id: record.id, title: record.title, fileName: record.fileName });
       }
-    });
-  })
-  .get((req, res) => {
-    db.readAll(req.query, (err, results) => {
-      if (err) throw err;
-      res.send(results);
-    });
-  })
-  .put((req, res) => {
-    db.update({ ...req.body }, (err) => {
-      if (err) throw err;
-      db.readAll(req.query, (err2, results) => {
-        if (err2) throw err2;
-        res.send(results);
-      });
-    });
-  })
-  .delete((req, res) => {
-    const me = false;
-    if (!me) {
-      db.readAll(req.query, (err, results) => {
-        if (err) throw err;
-        res.send(results);
-      });
-    } else {
-      db.deleteResource({ id: req.body.id, query: req.query }, (err, results) => {
-        if (err) throw err;
-        res.send(results);
-      });
+      return res.json({ message: 'uploaded', count: records.length, records });
+    } catch (e) {
+      console.error('[upload]', e);
+      return res.status(500).json({ error: e.message });
     }
   });
+});
 
-app.post('/file', (req, res) => {
-  const { fileName, fileID } = req.body;
-  get({ fileName, fileID }, (data) => {
-    res.end();
+app.put('/sources/:id', asyncRoute(async (req, res) => {
+  const updated = await store.update(req.params.id, req.body);
+  if (!updated) return res.status(404).json({ error: 'not found' });
+  return res.json(updated);
+}));
+
+app.delete('/sources/:id', asyncRoute(async (req, res) => {
+  const ok = await store.remove(req.params.id);
+  return res.json({ deleted: ok });
+}));
+
+// --- Client (SPA) -----------------------------------------------------------
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist));
+  app.get('*', (req, res) => res.sendFile(path.join(clientDist, 'index.html')));
+} else {
+  app.get('*', (req, res) => res.status(503).send(
+    'Client not built. Run `npm run build`, or `npm run client:dev` for the dev server.',
+  ));
+}
+
+// --- Error handler ----------------------------------------------------------
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error('[error]', err);
+  res.status(500).json({ error: err.message || 'internal error' });
+});
+
+if (require.main === module) {
+  app.listen(config.port, () => {
+    console.log(`expert search → http://localhost:${config.port}  (store: ${store.driver})`);
   });
-});
-app.delete('/file', (req, res) => {
-  const { fileName } = req.body;
-  fs.unlinkSync(path.resolve(__dirname, '..', 'dist', fileName));
-  res.end();
-});
+}
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
-});
-
-app.listen(3000, (err) => {
-  if (err) throw err;
-  else console.log('http://localhost:3000');
-});
+module.exports = app;
