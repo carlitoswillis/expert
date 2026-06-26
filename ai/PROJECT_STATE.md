@@ -31,15 +31,21 @@ knowledge, find and combine ideas** — not just academics, not just PDFs.
 5. [ ] **Add-source UI** with tabs: File · Link · Paste (replaces upload-only).
 6. [ ] **Capture: YouTube/podcast transcripts** (link → transcript).
 7. [ ] **Capture: ebooks (epub)** → text.
-8. [ ] **Capture: photos (OCR)** via tesseract.js (offline, no API key).
+8. [ ] **Capture: photos (OCR)** via tesseract.js (offline, no API key). Now
+       mostly reuse: `server/ocr.js` already has a shared tesseract.js worker
+       pool — feed it an image instead of mupdf-rendered PDF pages.
 9. [ ] **Capture: voice notes** (transcription — needs a model/API; scope later).
 
 ## Backlog
 - [ ] Synthesis layer (the long-term vision): semantic search (embeddings) +
       cited, combined answers across sources. Defer until capture is solid.
 - [ ] Search relevance: snippet/highlight of the matching passage in results.
-- [ ] Decide whether to keep or remove the legacy `/process` + `/ocr` pipeline.
-- [ ] OCR path for scanned/image-only PDFs so `content` isn't empty.
+- [ ] Remove the legacy `/process` + `/ocr` pipeline — superseded by the new
+      pure-WASM OCR in `server/ocr.js` (mupdf + tesseract.js).
+- [x] OCR path for scanned/image-only PDFs so `content` isn't empty —
+      background, parallel, `status:"processing"` → `ready`. (2026-06-26)
+- [x] Auto-fill Title/Authors/Year from text via LLM cascade (Gemini → Gemma →
+      Ollama), background, only fills blank fields. `server/metadata.js`. (2026-06-26)
 - [ ] Automated tests (API + a couple of component tests).
 - [ ] AuthN if ever exposed beyond localhost (currently fully open).
 - [ ] Optional: switch JSON store to SQLite+FTS5 for larger libraries.

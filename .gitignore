@@ -25,3 +25,6 @@ token.json
 
 # misc local content
 example texts
+
+# tesseract.js OCR language model cache (downloaded at runtime)
+*.traineddata

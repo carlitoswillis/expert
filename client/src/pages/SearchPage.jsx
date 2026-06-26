@@ -20,18 +20,27 @@ export default function SearchPage({ library = false }) {
 
   const hasResults = library || params.has('q') || params.has('page');
 
-  const load = useCallback(() => {
-    setLoading(true);
+  // `quiet` refreshes in place without flashing the "Searching…" state — used
+  // by the background poll below so cards update without the list blinking.
+  const load = useCallback((quiet = false) => {
+    if (!quiet) setLoading(true);
     setError(null);
-    searchSources({ q: queryParam, page: pageParam, limit: PER_PAGE })
+    return searchSources({ q: queryParam, page: pageParam, limit: PER_PAGE })
       .then((d) => setData(d))
       .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
+      .finally(() => { if (!quiet) setLoading(false); });
   }, [queryParam, pageParam]);
 
   useEffect(() => {
     if (hasResults) load();
   }, [hasResults, load]);
+
+  // While any source is still being OCR'd, poll so it "lights up" when ready.
+  useEffect(() => {
+    if (!data.results.some((s) => s.status === 'processing')) return undefined;
+    const timer = setInterval(() => load(true), 3000);
+    return () => clearInterval(timer);
+  }, [data, load]);
 
   useEffect(() => { setInput(queryParam); }, [queryParam]);
 

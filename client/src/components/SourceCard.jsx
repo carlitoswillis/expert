@@ -14,13 +14,21 @@ export default function SourceCard({ source, query, onUpdate, onDelete }) {
   const [editing, setEditing] = useState(false);
   const title = (source.title || source.fileName || 'Untitled').replace(/\.pdf$/i, '');
   const link = source.url || source.sourceUrl;
+  // A scanned PDF whose text is still being OCR'd: dim it and hold back actions
+  // until its content is searchable.
+  const processing = source.status === 'processing';
+  const failed = source.status === 'failed';
 
   return (
-    <article className="card">
+    <article className={`card${processing ? ' processing' : ''}`} aria-busy={processing || undefined}>
       <div className="card-main">
-        <div className="card-type"><span className="badge">{sourceType(source)}</span></div>
+        <div className="card-type">
+          <span className="badge">{sourceType(source)}</span>
+          {processing && <span className="badge ocr">reading text…</span>}
+          {failed && <span className="badge ocr fail">no text found</span>}
+        </div>
         <h3 className="card-title">
-          {link
+          {link && !processing
             ? <a href={link} target="_blank" rel="noreferrer">{highlight(title, query)}</a>
             : highlight(title, query)}
         </h3>
@@ -31,7 +39,7 @@ export default function SourceCard({ source, query, onUpdate, onDelete }) {
         </div>
       </div>
       <div className="card-actions">
-        <button type="button" className="ghost" onClick={() => setEditing(true)}>Edit</button>
+        <button type="button" className="ghost" onClick={() => setEditing(true)} disabled={processing}>Edit</button>
         <button
           type="button"
           className="ghost danger"

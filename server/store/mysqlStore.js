@@ -12,7 +12,7 @@ const pool = mysql.createPool({
   connectionLimit: 10,
 });
 
-const LIST_COLUMNS = 'id, authors, title, created, published, url, fileID, fileName';
+const LIST_COLUMNS = 'id, authors, title, created, published, url, fileID, fileName, status';
 
 function buildWhere(query) {
   const { q, authors, title, fileName, content } = query;
