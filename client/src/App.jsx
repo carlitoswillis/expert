@@ -5,11 +5,11 @@ import UploadPage from './pages/UploadPage.jsx';
 function Nav() {
   return (
     <header className="topbar">
-      <Link to="/" className="brand">expert<span>search</span></Link>
+      <Link to="/" className="brand">expert<span className="dot">.</span></Link>
       <nav>
         <NavLink to="/search" className={({ isActive }) => (isActive ? 'active' : '')}>Search</NavLink>
         <NavLink to="/library" className={({ isActive }) => (isActive ? 'active' : '')}>Library</NavLink>
-        <NavLink to="/upload" className={({ isActive }) => (isActive ? 'active' : '')}>Upload</NavLink>
+        <NavLink to="/upload" className={({ isActive }) => (isActive ? 'active' : '')}>Add</NavLink>
       </nav>
     </header>
   );
@@ -29,7 +29,7 @@ export default function App() {
         </Routes>
       </main>
       <footer className="footer">
-        <span>expert search · focused full-text research over your own library</span>
+        <span>expert · find &amp; combine ideas from everything you read</span>
       </footer>
     </div>
   );

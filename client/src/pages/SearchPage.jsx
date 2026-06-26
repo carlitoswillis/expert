@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { searchSources, updateSource, deleteSource } from '../api.js';
 import SourceCard from '../components/SourceCard.jsx';
 import Pagination from '../components/Pagination.jsx';
+import highlight from '../highlight.jsx';
 
 const PER_PAGE = 10;
 
@@ -63,10 +64,11 @@ export default function SearchPage({ library = false }) {
     <div className={`search ${hasResults ? 'has-results' : 'landing'}`}>
       {!hasResults && (
         <div className="hero">
-          <h1>expert search</h1>
+          <p className="eyebrow">your library, read closely</p>
+          <h1>What do you want to <mark>understand</mark>?</h1>
           <p className="tagline">
-            Search the full text of your own research library. Built to narrow,
-            not to flood.
+            Search the full text of everything you&rsquo;ve read — built to
+            narrow, not to flood.
           </p>
         </div>
       )}
@@ -77,7 +79,7 @@ export default function SearchPage({ library = false }) {
             autoFocus={!hasResults}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Search authors, titles, and full text…"
+            placeholder="Search titles, authors, and full text…"
             aria-label="Search"
           />
           <button type="submit" aria-label="Search">Search</button>
@@ -98,11 +100,16 @@ export default function SearchPage({ library = false }) {
                 <SourceCard
                   key={source.id}
                   source={source}
+                  query={queryParam}
                   onUpdate={handleUpdate}
                   onDelete={handleDelete}
                 />
               ))}
-              {data.count === 0 && <p className="status">No matches yet.</p>}
+              {data.count === 0 && (
+                <p className="status">
+                  Nothing matches yet. Try a broader term, or add a source.
+                </p>
+              )}
               <Pagination page={pageParam} pageCount={pageCount} onChange={goToPage} />
             </>
           )}
