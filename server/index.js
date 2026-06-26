@@ -6,6 +6,11 @@ const multer = require('multer');
 const config = require('./config');
 const store = require('./store');
 const { extractPdfText } = require('./extract');
+const metadata = require('./metadata');
+const jobs = require('./jobs');
+
+const isPdf = (name) => /\.pdf$/i.test(name || '');
+const textLength = (s) => String(s || '').replace(/\s/g, '').length;
 
 const app = express();
 app.use(express.json());
@@ -53,9 +58,19 @@ app.post('/sources', (req, res) => {
       const created = new Date().toDateString();
       const records = [];
 
+      // Which metadata fields the user didn't supply — the LLM may fill these.
+      const supplied = { title, authors, published };
+      const missing = jobs.fields.filter((f) => !String(supplied[f] || '').trim());
+
       for (const file of files) {
         // eslint-disable-next-line no-await-in-loop
         const content = await extractPdfText(file.path);
+        // A scanned/image PDF has no text layer, so pdf-parse comes back empty:
+        // OCR it in the background instead of blocking upload.
+        const needsOcr = isPdf(file.originalname) && textLength(content) < config.ocr.minChars;
+        // Enrich missing Title/Authors/Year from the text when a provider exists.
+        const willEnrich = isPdf(file.originalname) && missing.length > 0 && metadata.enabled();
+        const processing = needsOcr || willEnrich;
         const displayName = course ? `${course} – ${file.originalname}` : file.originalname;
         // eslint-disable-next-line no-await-in-loop
         const record = await store.create({
@@ -66,10 +81,17 @@ app.post('/sources', (req, res) => {
           fileName: displayName,
           created,
           content,
+          status: processing ? 'processing' : 'ready',
         });
-        records.push({ id: record.id, title: record.title, fileName: record.fileName });
+        if (processing) jobs.enqueue(store, record.id, file.path, { needsOcr, content, missing });
+        records.push({
+          id: record.id, title: record.title, fileName: record.fileName, status: record.status,
+        });
       }
-      return res.json({ message: 'uploaded', count: records.length, records });
+      const processing = records.filter((r) => r.status === 'processing').length;
+      return res.json({
+        message: 'uploaded', count: records.length, processing, records,
+      });
     } catch (e) {
       console.error('[upload]', e);
       return res.status(500).json({ error: e.message });

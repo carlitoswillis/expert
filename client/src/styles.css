@@ -170,6 +170,19 @@ main { flex: 1; width: 100%; max-width: 720px; margin: 0 auto; padding: 0 22px; 
 @media (prefers-reduced-motion: no-preference) {
   .card:hover { box-shadow: var(--shadow-lift); transform: translateY(-2px); }
 }
+/* A scanned PDF still being OCR'd: dimmed and not yet openable. */
+.card.processing { opacity: .6; }
+.card.processing:hover { box-shadow: var(--shadow); transform: none; }
+.card.processing .card-title { color: var(--ink-soft); }
+.badge.ocr {
+  margin-left: 8px; color: var(--accent-deep); background: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .card.processing .badge.ocr { animation: ocr-pulse 1.3s ease-in-out infinite; }
+}
+.badge.ocr.fail { color: #a23b2d; animation: none; }
+@keyframes ocr-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+
 .card-type { margin-bottom: 9px; }
 .card-type .badge {
   font-family: var(--mono); font-size: .62rem; letter-spacing: .16em; text-transform: uppercase;

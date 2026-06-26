@@ -24,7 +24,10 @@ export default function UploadPage() {
     setStatus({ type: 'info', text: 'Uploading and extracting text…' });
     try {
       const res = await uploadSources(formData);
-      setStatus({ type: 'ok', text: `Added ${res.count} source(s).` });
+      const ocrNote = res.processing
+        ? ` ${res.processing} scanned PDF(s) are being read in the background — they'll become searchable shortly.`
+        : '';
+      setStatus({ type: 'ok', text: `Added ${res.count} source(s).${ocrNote}` });
       if (fileRef.current) fileRef.current.value = '';
       setMeta({ title: '', authors: '', url: '', published: '', course: '' });
     } catch (err) {
@@ -40,8 +43,9 @@ export default function UploadPage() {
       <h1>Add a source</h1>
       <p className="tagline">
         Drop in one or more PDFs — text is extracted automatically so it becomes
-        searchable. Metadata is optional; for a single file it overrides the
-        defaults. (Web links, transcripts, notes &amp; more are on the way.)
+        searchable. Scanned/image PDFs are read with OCR in the background.
+        Metadata is optional; for a single file it overrides the defaults.
+        (Web links, transcripts, notes &amp; more are on the way.)
       </p>
       <form onSubmit={submit} className="upload-form">
         <label className="file">

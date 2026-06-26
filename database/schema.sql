@@ -18,5 +18,6 @@ CREATE TABLE IF NOT EXISTS sources (
   fileID    TEXT,
   driveLink TEXT,
   fileName  TEXT,
+  status    TEXT,            -- ready | processing (OCR running) | failed
   PRIMARY KEY (id)
 );
