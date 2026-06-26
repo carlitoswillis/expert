@@ -1,42 +1,26 @@
 {
   "name": "expert",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "2.0.0",
+  "description": "Expert search — upload PDFs, extract their text, and run focused full-text academic searches.",
+  "main": "server/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build:dev": "webpack-cli --watch",
-    "start": "node server",
-    "start:dev": "nodemon server"
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js",
+    "client:install": "npm --prefix client install",
+    "client:dev": "npm --prefix client run dev",
+    "build": "npm --prefix client install && npm --prefix client run build",
+    "setup": "npm install && npm run build",
+    "seed": "node server/scripts/seed.js",
+    "verify": "bash ai/scripts/verify.sh"
   },
   "author": "Carlitos Willis",
   "license": "ISC",
   "dependencies": {
-    "aws-sdk": "^2.743.0",
-    "axios": "^0.20.0",
-    "body-parser": "^1.19.0",
-    "dotenv": "^8.2.0",
-    "express": "^4.17.1",
-    "googleapis": "^59.0.0",
-    "jquery": "^3.5.1",
-    "multer": "^1.4.2",
-    "mysql": "^2.18.1",
-    "pdf-extract": "^1.0.11",
-    "pdf-lib": "^1.10.0",
-    "pdf-ocr": "^0.1.0",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1",
-    "react-paginate": "^6.3.2",
-    "react-router-dom": "^5.2.0",
-    "webpack-cli": "^3.3.12"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.11.5",
-    "@babel/preset-env": "^7.11.5",
-    "@babel/preset-react": "^7.10.4",
-    "babel-loader": "^8.1.0",
-    "eslint": "^7.8.0",
-    "eslint-plugin-react": "^7.20.6",
-    "webpack": "^4.44.1"
+    "@extractus/article-extractor": "^8.1.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "multer": "^2.0.0",
+    "mysql2": "^3.11.5",
+    "pdf-parse": "^1.1.1"
   }
 }

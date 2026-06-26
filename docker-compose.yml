@@ -1,0 +1,22 @@
+# Optional: a local MySQL for the mysql storage driver.
+#   docker compose up -d
+#   DB_HOST=localhost DB_USER=root DB_PASSWORD=expert DB=my_db npm start
+#
+# The schema in ./database is auto-loaded on first boot. Skip this entirely
+# if you're happy with the default JSON store.
+
+services:
+  db:
+    image: mysql:8
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: expert
+      MYSQL_DATABASE: my_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+
+volumes:
+  db-data:

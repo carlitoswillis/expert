@@ -1,5 +1,27 @@
+# dependencies
 node_modules
+client/node_modules
+
+# build output
+client/dist
+dist/bundle.js
+bundle.js
+
+# local data (JSON store) & uploaded files
+data
+uploads/*
+!uploads/.gitkeep
+
+# secrets / config
+.env
 credentials.json
 token.json
-.env
-bundle.js
+
+# editor / OS
+.DS_Store
+
+# legacy aider artifacts
+.aider*
+
+# misc local content
+example texts
