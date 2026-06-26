@@ -36,10 +36,12 @@ export default function UploadPage() {
 
   return (
     <div className="upload">
-      <h1>Upload sources</h1>
+      <p className="eyebrow">grow your library</p>
+      <h1>Add a source</h1>
       <p className="tagline">
-        Add one or more PDFs. Text is extracted automatically so it becomes searchable.
-        Metadata is optional — for a single file it overrides the defaults.
+        Drop in one or more PDFs — text is extracted automatically so it becomes
+        searchable. Metadata is optional; for a single file it overrides the
+        defaults. (Web links, transcripts, notes &amp; more are on the way.)
       </p>
       <form onSubmit={submit} className="upload-form">
         <label className="file">
