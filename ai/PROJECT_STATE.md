@@ -37,6 +37,9 @@ knowledge, find and combine ideas** — not just academics, not just PDFs.
 9. [ ] **Capture: voice notes** (transcription — needs a model/API; scope later).
 
 ## Backlog
+- [ ] Rename the product — "expert search" no longer fits the broadened "capture
+      anything, find & combine ideas" direction. Pick a new name + update README,
+      package metadata, and UI.
 - [ ] Synthesis layer (the long-term vision): semantic search (embeddings) +
       cited, combined answers across sources. Defer until capture is solid.
 - [ ] Search relevance: snippet/highlight of the matching passage in results.
