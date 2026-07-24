@@ -87,7 +87,8 @@ export default function ReaderPage() {
 
   useEffect(() => {
     let gone = false;
-    const task = pdfjs.getDocument(sourceFileUrl(id));
+    // pdf.js v6 only accepts an options object; a bare string src is ignored.
+    const task = pdfjs.getDocument({ url: new URL(sourceFileUrl(id), window.location.href).href });
     task.promise
       .then((d) => { if (!gone) setDoc(d); })
       .catch((e) => {
