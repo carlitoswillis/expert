@@ -9,6 +9,7 @@ const { extractPdfText } = require('./extract');
 const capture = require('./capture');
 const metadata = require('./metadata');
 const jobs = require('./jobs');
+const { resolveFile } = require('./files');
 
 const isPdf = (name) => /\.pdf$/i.test(name || '');
 const isHtml = (name) => /\.x?html?$/i.test(name || '');
@@ -66,13 +67,31 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/sources', asyncRoute(async (req, res) => {
-  res.json(await store.list(req.query));
+  const { results, count } = await store.list(req.query);
+  // The in-app reader can only open PDFs we actually have on disk; tell the
+  // client which rows those are so it can point the title at /read/:id.
+  res.json({
+    count,
+    results: results.map((row) => ({ ...row, hasFile: isPdf(resolveFile(row) || '') })),
+  });
 }));
 
 app.get('/sources/:id', asyncRoute(async (req, res) => {
   const source = await store.get(req.params.id);
   if (!source) return res.status(404).json({ error: 'not found' });
   return res.json(source);
+}));
+
+// Stream a source's stored file so the reader (and the card's title link) can
+// open it. 404s for records with nothing on disk: seeds, notes, captured links.
+app.get('/sources/:id/file', asyncRoute(async (req, res) => {
+  const source = await store.get(req.params.id);
+  if (!source) return res.status(404).json({ error: 'not found' });
+  const file = resolveFile(source);
+  if (!file) return res.status(404).json({ error: 'no file stored for this source' });
+  return res.sendFile(file, {
+    headers: { 'Content-Disposition': `inline; filename="${path.basename(file).replace(/"/g, '')}"` },
+  });
 }));
 
 app.post('/sources', (req, res) => {
@@ -128,6 +147,7 @@ app.post('/sources', (req, res) => {
           ...values,
           url: url || '',
           sourceUrl: web ? web.sourceUrl : '',
+          fileID: path.basename(file.path),
           fileName: displayName,
           created,
           content,

@@ -1,6 +1,10 @@
+import { Suspense, lazy } from 'react';
 import { Routes, Route, NavLink, Link } from 'react-router-dom';
 import SearchPage from './pages/SearchPage.jsx';
 import AddPage from './pages/AddPage.jsx';
+
+// The reader pulls in pdf.js (~650 kB); load it only when a document is opened.
+const ReaderPage = lazy(() => import('./pages/ReaderPage.jsx'));
 
 function Nav() {
   return (
@@ -25,6 +29,14 @@ export default function App() {
           <Route path="/search" element={<SearchPage />} />
           <Route path="/library" element={<SearchPage library />} />
           <Route path="/upload" element={<AddPage />} />
+          <Route
+            path="/read/:id"
+            element={(
+              <Suspense fallback={<p className="status">Opening…</p>}>
+                <ReaderPage />
+              </Suspense>
+            )}
+          />
           <Route path="*" element={<SearchPage />} />
         </Routes>
       </main>

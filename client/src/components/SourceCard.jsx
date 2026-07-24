@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import EditModal from './EditModal.jsx';
 import highlight from '../highlight.jsx';
 
@@ -37,9 +38,14 @@ export default function SourceCard({ source, query, onUpdate, onDelete }) {
           {failed && <span className="badge ocr fail">no text found</span>}
         </div>
         <h3 className="card-title">
-          {link && !processing
-            ? <a href={link} target="_blank" rel="noreferrer">{highlight(title, query)}</a>
-            : highlight(title, query)}
+          {(() => {
+            const text = highlight(title, query);
+            // Prefer the in-app reader when the PDF itself is on disk — even
+            // mid-OCR, since the pages are viewable before the text is.
+            if (source.hasFile) return <Link to={`/read/${source.id}`}>{text}</Link>;
+            if (link && !processing) return <a href={link} target="_blank" rel="noreferrer">{text}</a>;
+            return text;
+          })()}
         </h3>
         <div className="card-meta">
           {source.authors && <span className="authors">{highlight(source.authors, query)}</span>}

@@ -286,6 +286,38 @@ button.ghost.danger:hover { border-color: #a23b2d; color: #a23b2d; }
   font-family: var(--mono); font-size: .7rem; letter-spacing: .1em; text-transform: uppercase;
 }
 
+/* ---------------- Reader ---------------- */
+.reader { padding-top: 14px; }
+.reader-bar { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.reader-back {
+  font-family: var(--mono); font-size: .72rem; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--ink-soft); text-decoration: none; white-space: nowrap;
+}
+.reader-back:hover { color: var(--ink); }
+.reader-title {
+  font-family: var(--display); font-weight: 600; font-size: 1.15rem; line-height: 1.2;
+  margin: 0; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.reader-tools { display: flex; align-items: center; gap: 7px; }
+.reader-pagecount {
+  font-family: var(--mono); font-size: .66rem; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink-faint); margin-right: 4px; white-space: nowrap;
+}
+.reader-tools button.turn { font-size: .95rem; line-height: 1; padding: 5px 11px; }
+a.ghost {
+  border: 1px solid var(--line); color: var(--ink-soft); text-decoration: none;
+  font-family: var(--mono); font-size: .62rem; letter-spacing: .1em; text-transform: uppercase;
+  padding: 7px 12px; border-radius: 8px; transition: border-color .15s, color .15s;
+}
+a.ghost:hover { border-color: var(--accent); color: var(--accent); }
+.reader-pages { display: flex; flex-direction: column; gap: 16px; padding-bottom: 40px; }
+/* Pages stay white even by lamplight — they're facsimiles of paper, not UI. */
+.reader-pages .page {
+  background: #fff; border: 1px solid var(--line); border-radius: 4px;
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.reader-pages canvas { display: block; }
+
 /* ---------------- Footer ---------------- */
 .footer { text-align: center; color: var(--ink-faint); font-family: var(--mono); font-size: .66rem; letter-spacing: .1em; text-transform: uppercase; padding: 40px 22px 30px; }
 

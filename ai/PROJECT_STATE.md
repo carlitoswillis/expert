@@ -1,6 +1,6 @@
 # Project State
 
-_Last updated: 2026-07-23_
+_Last updated: 2026-07-24_
 
 ## Product Direction (decided 2026-06-26)
 Owner reframed the product: it's for **everyone seeking to gain and reconcile
@@ -44,6 +44,19 @@ knowledge, find and combine ideas** — not just academics, not just PDFs.
 - [ ] AuthN if ever exposed beyond localhost (currently fully open).
 - [ ] Optional: switch JSON store to SQLite+FTS5 for larger libraries.
 - [ ] Manual smoke test in a browser (search, edit, delete, upload a real PDF).
+
+## Completed (in-app PDF reader — 2026-07-24)
+Search results for uploaded PDFs weren't clickable — records had no URL and the
+server never served the stored files. Now every PDF on disk opens in-app:
+- [x] **`GET /sources/:id/file`** streams the stored upload (`server/files.js`
+      resolves records → disk, incl. legacy bulk-imported names with course
+      prefixes; newest timestamp wins on re-uploads). New uploads persist the
+      exact disk name in `fileID`.
+- [x] **`hasFile` on list rows** — card titles link to `/read/:id` when the PDF
+      exists on disk (even mid-OCR), else fall back to the external URL.
+- [x] **Reader view (`/read/:id`)** — pdf.js (lazy-loaded chunk), pages fit to
+      the column, lazy page rendering, and **rotation** (⟲/⟳, 90° steps) for
+      old sideways scans — remembered per document in localStorage.
 
 ## Completed (bulk import — 2026-07-23)
 Ingested `example texts/` (147 PDFs + 1 saved page) — 7.6M chars searchable.

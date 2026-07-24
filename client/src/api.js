@@ -27,6 +27,9 @@ export function getSource(id) {
   return fetch(`/sources/${id}`).then(asJson);
 }
 
+// Where a source's stored file is served from — the reader loads this.
+export const sourceFileUrl = (id) => `/sources/${id}/file`;
+
 export function updateSource(id, patch) {
   return fetch(`/sources/${id}`, {
     method: 'PUT',
