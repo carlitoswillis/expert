@@ -18,9 +18,13 @@ echo "▶ Building client"
 npm run build --silent >/dev/null 2>&1 && pass "client build" || fail "client build"
 
 echo "▶ Booting server on :$PORT"
-PORT="$PORT" node server/index.js >/tmp/expert-verify.log 2>&1 &
+# Point the store at a throwaway dir so smoke tests that create sources never
+# touch the real library.
+SANDBOX="$(mktemp -d)"
+PORT="$PORT" DATA_DIR="$SANDBOX/data" UPLOAD_DIR="$SANDBOX/uploads" \
+  node server/index.js >/tmp/expert-verify.log 2>&1 &
 SERVER_PID=$!
-trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+trap '{ kill $SERVER_PID && wait $SERVER_PID; } 2>/dev/null; rm -rf "$SANDBOX"' EXIT
 
 # wait for /health
 for i in $(seq 1 20); do
@@ -33,5 +37,23 @@ curl -fsS "http://localhost:$PORT/health" | grep -q '"status":"ok"' \
   && pass "/health" || fail "/health did not respond ok"
 curl -fsS "http://localhost:$PORT/sources?limit=1" | grep -q '"results"' \
   && pass "/sources list" || fail "/sources list"
+
+# --- Capture paths (no network needed for text) ---
+curl -fsS -X POST "http://localhost:$PORT/sources/text" \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"verify note","text":"a smoke-test note about widgets"}' \
+  | grep -q '"type":"note"' \
+  && pass "POST /sources/text" || fail "POST /sources/text"
+
+curl -fsS "http://localhost:$PORT/sources?type=note" | grep -q 'verify note' \
+  && pass "type filter" || fail "type filter"
+
+curl -fsS "http://localhost:$PORT/sources?q=widgets" | grep -q 'verify note' \
+  && pass "full-text search" || fail "full-text search"
+
+# A bad link must be a clean 400, not a 500.
+[ "$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://localhost:$PORT/sources/url" \
+  -H 'Content-Type: application/json' -d '{"url":"not-a-url"}')" = "400" ] \
+  && pass "rejects a bad link" || fail "bad link should 400"
 
 echo "✅ verify passed"

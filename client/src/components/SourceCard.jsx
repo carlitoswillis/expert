@@ -10,6 +10,15 @@ function sourceType(source) {
   return 'source';
 }
 
+// A captured page has no filename, so show where it came from instead.
+function hostOf(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+}
+
 export default function SourceCard({ source, query, onUpdate, onDelete }) {
   const [editing, setEditing] = useState(false);
   const title = (source.title || source.fileName || 'Untitled').replace(/\.pdf$/i, '');
@@ -36,6 +45,7 @@ export default function SourceCard({ source, query, onUpdate, onDelete }) {
           {source.authors && <span className="authors">{highlight(source.authors, query)}</span>}
           {source.published && <span className="year">{source.published}</span>}
           {source.fileName && <span className="file">{source.fileName}</span>}
+          {!source.fileName && source.sourceUrl && <span className="file">{hostOf(source.sourceUrl)}</span>}
         </div>
       </div>
       <div className="card-actions">

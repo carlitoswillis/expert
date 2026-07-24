@@ -27,8 +27,18 @@ function persist(state) {
 
 const has = (value, term) => String(value || '').toLowerCase().includes(String(term).toLowerCase());
 
+// Records created before `type` existed still need a bucket to filter on.
+function typeOf(row) {
+  if (row.type) return row.type;
+  if (row.sourceUrl) return 'web';
+  if (/\.pdf$/i.test(row.fileName || '')) return 'pdf';
+  return 'source';
+}
+
 function matches(row, query) {
-  const { q, authors, title, fileName, content } = query;
+  const { q, authors, title, fileName, content, type } = query;
+  // `type` narrows every other mode of search rather than replacing it.
+  if (type && typeOf(row) !== type) return false;
   if (q) {
     return has(row.content, q) || has(row.title, q) || has(row.authors, q) || has(row.fileName, q);
   }

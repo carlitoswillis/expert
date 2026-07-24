@@ -12,24 +12,36 @@ const pool = mysql.createPool({
   connectionLimit: 10,
 });
 
-const LIST_COLUMNS = 'id, authors, title, created, published, url, fileID, fileName, status';
+const LIST_COLUMNS = 'id, type, authors, title, created, published, url, sourceUrl, fileID, fileName, status';
 
+// Column names here are literals from this file; only values are interpolated,
+// and always as `?` placeholders.
 function buildWhere(query) {
-  const { q, authors, title, fileName, content } = query;
+  const { q, authors, title, fileName, content, type } = query;
+  const clauses = [];
+  const params = [];
+
   if (q) {
     const like = `%${q}%`;
-    return {
-      clause: ' WHERE content LIKE ? OR title LIKE ? OR authors LIKE ? OR fileName LIKE ?',
-      params: [like, like, like, like],
-    };
+    clauses.push('(content LIKE ? OR title LIKE ? OR authors LIKE ? OR fileName LIKE ?)');
+    params.push(like, like, like, like);
+  } else {
+    [['authors', authors], ['title', title], ['fileName', fileName], ['content', content]]
+      .filter(([, value]) => value)
+      .forEach(([col, value]) => {
+        clauses.push(`${col} LIKE ?`);
+        params.push(`%${value}%`);
+      });
   }
-  const parts = [['authors', authors], ['title', title], ['fileName', fileName], ['content', content]]
-    .filter(([, value]) => value);
-  if (!parts.length) return { clause: '', params: [] };
-  return {
-    clause: ` WHERE ${parts.map(([col]) => `${col} LIKE ?`).join(' AND ')}`,
-    params: parts.map(([, value]) => `%${value}%`),
-  };
+
+  // `type` narrows whatever the other filters matched. Rows written before the
+  // column existed have a NULL type and so never match an explicit filter.
+  if (type) {
+    clauses.push('type = ?');
+    params.push(type);
+  }
+
+  return { clause: clauses.length ? ` WHERE ${clauses.join(' AND ')}` : '', params };
 }
 
 async function list(query = {}) {

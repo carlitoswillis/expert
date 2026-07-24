@@ -1,6 +1,6 @@
 # Project State
 
-_Last updated: 2026-06-26_
+_Last updated: 2026-07-23_
 
 ## Product Direction (decided 2026-06-26)
 Owner reframed the product: it's for **everyone seeking to gain and reconcile
@@ -16,25 +16,16 @@ knowledge, find and combine ideas** — not just academics, not just PDFs.
 - See [DECISIONS.md](./DECISIONS.md).
 
 ## Current Focus
-- v2.1: multi-format capture + warm redesign. **Work one task at a time.**
+- v2.1 shipped file/link/paste capture. Next: the remaining capture formats
+  (transcripts, ebooks, photos, voice). **Work one task at a time.**
 
 ## Active Tasks (ordered — do the top one)
-1. [ ] **Warm reading redesign** of the client (paper bg, serif, soft edges;
-       fix the off-balance landing→results layout). Visual only, low risk.
-2. [ ] **Generalize the data model** end-to-end: `type` + `sourceUrl` are in
-       config + schema; surface `type` in list/UI; show a source-type badge.
-3. [ ] **Capture: paste text / notes** — `POST /sources/text` (`{title, text,
-       authors, url}`) → store with `type:"note"`. Trivial, high value.
-4. [ ] **Capture: web articles** — `POST /sources/url` using
-       `@extractus/article-extractor` (already installed) → readable text,
-       `type:"web"`, `sourceUrl`.
-5. [ ] **Add-source UI** with tabs: File · Link · Paste (replaces upload-only).
-6. [ ] **Capture: YouTube/podcast transcripts** (link → transcript).
-7. [ ] **Capture: ebooks (epub)** → text.
-8. [ ] **Capture: photos (OCR)** via tesseract.js (offline, no API key). Now
+1. [ ] **Capture: YouTube/podcast transcripts** (link → transcript).
+2. [ ] **Capture: ebooks (epub)** → text.
+3. [ ] **Capture: photos (OCR)** via tesseract.js (offline, no API key). Now
        mostly reuse: `server/ocr.js` already has a shared tesseract.js worker
        pool — feed it an image instead of mupdf-rendered PDF pages.
-9. [ ] **Capture: voice notes** (transcription — needs a model/API; scope later).
+4. [ ] **Capture: voice notes** (transcription — needs a model/API; scope later).
 
 ## Backlog
 - [ ] Rename the product — "expert search" no longer fits the broadened "capture
@@ -53,6 +44,28 @@ knowledge, find and combine ideas** — not just academics, not just PDFs.
 - [ ] AuthN if ever exposed beyond localhost (currently fully open).
 - [ ] Optional: switch JSON store to SQLite+FTS5 for larger libraries.
 - [ ] Manual smoke test in a browser (search, edit, delete, upload a real PDF).
+
+## Completed (v2.1 — 2026-07-23)
+- [x] **Warm reading redesign** of the client (paper bg, serif, soft edges).
+- [x] **Generalized data model**: uploads now write `type`; `type`/`sourceUrl`
+      are returned by both stores (the MySQL driver wasn't selecting them);
+      cards show a source-type badge and the origin host.
+- [x] **Capture: paste text / notes** — `POST /sources/text` → `type:"note"`.
+      Notes deliberately skip LLM enrichment: the user wrote the text, so a
+      guessed "author" is worse than a blank (an early test had Gemini
+      attributing a personal note to Simone Weil).
+- [x] **Capture: web articles** — `POST /sources/url` via
+      `@extractus/article-extractor`, with a raw-HTML fallback so JS-heavy or
+      gated pages still land in the library. `server/capture.js`.
+- [x] **Add-source UI** with tabs: File · Link · Paste.
+- [x] **Filter by source type** — `?type=` in both stores + chips in the UI.
+      Legacy records with no `type` are bucketed by inference (JSON store).
+- [x] **`-p / --port` CLI flag** — `npm start -- -p 3004` now works instead of
+      being silently swallowed by node. Vite's dev proxy follows `API_PORT`.
+- [x] **Stranded-job recovery** — sources left `'processing'` by a killed
+      process were dimmed and un-editable forever; they're now settled at boot.
+- [x] `verify.sh` covers the capture endpoints and runs against a temp
+      `DATA_DIR` so smoke tests no longer write into the real library.
 
 ## Completed (v2.0 — 2026-06-26)
 - [x] Replaced webpack 4 / jQuery / React 16 with Vite + React 18 client.

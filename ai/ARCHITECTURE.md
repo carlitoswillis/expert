@@ -26,13 +26,22 @@ modern Vite/React-18 client and an Express backend with a pluggable store.
   error handler.
 - Endpoints:
   - `GET  /health` — liveness + active store driver.
-  - `GET  /sources` — list/search (`q`, `page`, `limit`, or field filters).
+  - `GET  /sources` — list/search (`q`, `type`, `page`, `limit`, field filters).
   - `GET  /sources/:id` — full record (includes extracted `content`).
   - `POST /sources` — multipart upload (`myFile[]` + metadata); extracts text.
+  - `POST /sources/url` — capture a web article by link (`type:"web"`).
+  - `POST /sources/text` — capture pasted text / a note (`type:"note"`).
   - `PUT  /sources/:id` — update metadata.
   - `DELETE /sources/:id` — delete.
 - `server/extract.js` — pure-JS PDF text extraction via `pdf-parse`
   (best-effort; never throws).
+- `server/capture.js` — non-PDF capture. Web pages go through
+  `@extractus/article-extractor` (ESM, loaded via dynamic `import` from this
+  CommonJS server) and fall back to raw HTML stripping when readability finds
+  nothing. Produces the same record shape as the upload path.
+- On boot the server settles any record left `'processing'` by a killed
+  process — background jobs are in-memory only, so otherwise they'd be
+  stranded (dimmed and un-editable) forever.
 
 ### 3. Storage — `server/store/`
 Pluggable, chosen at startup by `server/config.js`:
@@ -54,11 +63,15 @@ See [DECISIONS.md](./DECISIONS.md).
 
 ## Data Flow
 
-### Upload
+### Capture
 ```
-PDF(s) ──multipart──▶ POST /sources ──▶ multer saves to uploads/
-        ──▶ extract.js (pdf-parse → normalized text)
-        ──▶ store.create({ title, authors, …, content })
+PDF(s) ──multipart──▶ POST /sources     ──▶ multer saves to uploads/
+                                        ──▶ extract.js (pdf-parse → text)
+link   ──JSON───────▶ POST /sources/url ──▶ capture.fromUrl (readability,
+                                            raw-HTML fallback)
+text   ──JSON───────▶ POST /sources/text──▶ capture.fromText (normalize)
+        ──▶ store.create({ type, title, authors, …, content })
+        ──▶ jobs.enqueue (background OCR and/or LLM metadata, when applicable)
 ```
 
 ### Search

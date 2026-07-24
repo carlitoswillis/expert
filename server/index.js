@@ -6,6 +6,7 @@ const multer = require('multer');
 const config = require('./config');
 const store = require('./store');
 const { extractPdfText } = require('./extract');
+const capture = require('./capture');
 const metadata = require('./metadata');
 const jobs = require('./jobs');
 
@@ -33,6 +34,25 @@ const upload = multer({
 }).array('myFile');
 
 const asyncRoute = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+// Persist a non-PDF capture and, when a provider is configured, let the LLM
+// fill whatever the source didn't give us — only ever the blank fields, and
+// only those the caller says make sense for that kind of source.
+async function saveCapture(record, enrichable = jobs.fields) {
+  const missing = enrichable.filter((f) => !String(record[f] || '').trim());
+  const willEnrich = Boolean(record.content) && missing.length > 0 && metadata.enabled();
+  const created = new Date().toDateString();
+  const saved = await store.create({
+    ...record,
+    url: record.url || '',
+    created,
+    status: willEnrich ? 'processing' : 'ready',
+  });
+  if (willEnrich) {
+    jobs.enqueue(store, saved.id, null, { needsOcr: false, content: record.content, missing });
+  }
+  return saved;
+}
 
 // --- API --------------------------------------------------------------------
 app.get('/health', (req, res) => {
@@ -74,6 +94,7 @@ app.post('/sources', (req, res) => {
         const displayName = course ? `${course} – ${file.originalname}` : file.originalname;
         // eslint-disable-next-line no-await-in-loop
         const record = await store.create({
+          type: isPdf(file.originalname) ? 'pdf' : 'file',
           title: title || file.originalname.replace(/\.pdf$/i, ''),
           authors: authors || '',
           url: url || '',
@@ -99,6 +120,24 @@ app.post('/sources', (req, res) => {
   });
 });
 
+// Capture a web article by link: readability extraction, with a raw-HTML
+// fallback so gated/JS-heavy pages still land in the library.
+app.post('/sources/url', asyncRoute(async (req, res) => {
+  const record = await capture.fromUrl(req.body.url);
+  const saved = await saveCapture(record);
+  return res.json({ message: 'captured', record: saved });
+}));
+
+// Capture pasted text / a note.
+app.post('/sources/text', asyncRoute(async (req, res) => {
+  const record = capture.fromText(req.body);
+  // Notes skip LLM enrichment entirely: the user wrote the text, so there's no
+  // bibliographic author or year to recover, and guessing at one would be
+  // worse than the blank. A note saves instantly and is searchable at once.
+  const saved = await saveCapture(record, []);
+  return res.json({ message: 'captured', record: saved });
+}));
+
 app.put('/sources/:id', asyncRoute(async (req, res) => {
   const updated = await store.update(req.params.id, req.body);
   if (!updated) return res.status(404).json({ error: 'not found' });
@@ -123,11 +162,29 @@ if (fs.existsSync(clientDist)) {
 // --- Error handler ----------------------------------------------------------
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  console.error('[error]', err);
-  res.status(500).json({ error: err.message || 'internal error' });
+  // Capture paths attach a `status` for user-fixable problems (bad URL, empty
+  // paste); everything else is a genuine 500.
+  const status = Number(err.status) || 500;
+  if (status >= 500) console.error('[error]', err);
+  res.status(status).json({ error: err.message || 'internal error' });
 });
 
+// Background jobs live only in memory, so anything left 'processing' when the
+// process died is stranded: the UI dims those cards and disables their actions
+// forever. At boot, settle them by what they actually have — text means ready,
+// no text means the extraction failed.
+async function recoverStaleJobs() {
+  const { results } = await store.list({ limit: 1000 });
+  const stale = results.filter((r) => r.status === 'processing');
+  await Promise.all(stale.map(async (row) => {
+    const full = await store.get(row.id);
+    await store.update(row.id, { status: full && full.content ? 'ready' : 'failed' });
+  }));
+  if (stale.length) console.log(`[jobs] recovered ${stale.length} interrupted source(s)`);
+}
+
 if (require.main === module) {
+  recoverStaleJobs().catch((err) => console.error('[jobs] recovery failed:', err.message));
   app.listen(config.port, () => {
     console.log(`expert search → http://localhost:${config.port}  (store: ${store.driver})`);
   });

@@ -24,8 +24,23 @@ const FIELDS = [
   'status',
 ];
 
+// Port precedence: `--port 3004` / `-p 3004` on the CLI, then PORT, then 3000.
+// The CLI flag exists because `npm start -- -p 3004` is the reflex; without this
+// node just swallows the argument and the server quietly stays on 3000.
+const portFromArgv = () => {
+  const argv = process.argv.slice(2);
+  for (let i = 0; i < argv.length; i += 1) {
+    const m = /^(?:-p|--port)(?:=(.+))?$/.exec(argv[i]);
+    if (m) {
+      const value = Number(m[1] !== undefined ? m[1] : argv[i + 1]);
+      if (Number.isInteger(value) && value > 0 && value < 65536) return value;
+    }
+  }
+  return null;
+};
+
 const config = {
-  port: Number(process.env.PORT) || 3000,
+  port: portFromArgv() || Number(process.env.PORT) || 3000,
 
   // Where the new pure-JS pipeline writes uploaded files.
   uploadDir: process.env.UPLOAD_DIR || path.resolve(__dirname, '..', 'uploads'),

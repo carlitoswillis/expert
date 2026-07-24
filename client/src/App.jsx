@@ -1,6 +1,6 @@
 import { Routes, Route, NavLink, Link } from 'react-router-dom';
 import SearchPage from './pages/SearchPage.jsx';
-import UploadPage from './pages/UploadPage.jsx';
+import AddPage from './pages/AddPage.jsx';
 
 function Nav() {
   return (
@@ -24,7 +24,7 @@ export default function App() {
           <Route path="/" element={<SearchPage />} />
           <Route path="/search" element={<SearchPage />} />
           <Route path="/library" element={<SearchPage library />} />
-          <Route path="/upload" element={<UploadPage />} />
+          <Route path="/upload" element={<AddPage />} />
           <Route path="*" element={<SearchPage />} />
         </Routes>
       </main>
