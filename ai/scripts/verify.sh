@@ -51,6 +51,13 @@ curl -fsS "http://localhost:$PORT/sources?type=note" | grep -q 'verify note' \
 curl -fsS "http://localhost:$PORT/sources?q=widgets" | grep -q 'verify note' \
   && pass "full-text search" || fail "full-text search"
 
+# Accents must not hide a source: searching either spelling finds it.
+curl -fsS -X POST "http://localhost:$PORT/sources/text" \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"accent note","text":"the Pirahã language"}' >/dev/null
+curl -fsS "http://localhost:$PORT/sources?q=Piraha" | grep -q 'accent note' \
+  && pass "diacritic-insensitive search" || fail "unaccented query missed an accented source"
+
 # A bad link must be a clean 400, not a 500.
 [ "$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://localhost:$PORT/sources/url" \
   -H 'Content-Type: application/json' -d '{"url":"not-a-url"}')" = "400" ] \

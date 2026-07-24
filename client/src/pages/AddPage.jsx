@@ -5,7 +5,7 @@ import { uploadSources, captureUrl, captureText } from '../api.js';
 // Three ways in — a file, a link, or text you paste. Each writes the same kind
 // of record, so the library doesn't care which door a source came through.
 const TABS = [
-  { key: 'file', label: 'File', blurb: 'PDFs. Text is extracted automatically; scanned pages are read with OCR in the background.' },
+  { key: 'file', label: 'File', blurb: 'PDFs, or web pages you saved to disk. Text is extracted automatically; scanned pages are read with OCR in the background.' },
   { key: 'link', label: 'Link', blurb: 'An article or web page. We fetch it and keep the readable text, not the clutter.' },
   { key: 'paste', label: 'Paste', blurb: 'A note, a quote, a passage — anything you want to be able to find again.' },
 ];
@@ -41,7 +41,7 @@ export default function AddPage() {
     e.preventDefault();
     const files = fileRef.current?.files;
     if (!files || !files.length) {
-      setStatus({ type: 'error', text: 'Choose at least one PDF.' });
+      setStatus({ type: 'error', text: 'Choose at least one file.' });
       return;
     }
     setStatus({ type: 'info', text: 'Uploading and extracting text…' });
@@ -110,7 +110,7 @@ export default function AddPage() {
       {tab === 'file' && (
         <form onSubmit={submitFile} className="upload-form">
           <label className="file">
-            <input ref={fileRef} type="file" accept="application/pdf,.pdf" multiple />
+            <input ref={fileRef} type="file" accept="application/pdf,.pdf,text/html,.html,.htm" multiple />
           </label>
           <div className="grid">
             <label>Title<input value={meta.title} onChange={changeMeta('title')} placeholder="(defaults to filename)" /></label>

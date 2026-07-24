@@ -25,7 +25,17 @@ function persist(state) {
   fs.renameSync(tmp, FILE);
 }
 
-const has = (value, term) => String(value || '').toLowerCase().includes(String(term).toLowerCase());
+// Fold case and diacritics so "Piraha" finds "Pirahã" and vice versa. Real
+// libraries mix the two constantly — OCR drops accents, authors transliterate,
+// and nobody types ã on the way to a search box. (MySQL's default collation is
+// already accent-insensitive, so this keeps the two drivers behaving alike.)
+const fold = (value) => String(value || '')
+  .normalize('NFD')
+  // U+0300–U+036F: the combining diacritical marks NFD splits off.
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase();
+
+const has = (value, term) => fold(value).includes(fold(term));
 
 // Records created before `type` existed still need a bucket to filter on.
 function typeOf(row) {

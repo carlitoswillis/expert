@@ -105,6 +105,7 @@ async function lookupYear(title, authors) {
 }
 
 function providers() {
+  if (META.off) return [];
   const list = [];
   if (META.geminiKey) {
     list.push({ name: META.geminiModel, call: (p) => callGoogle(META.geminiModel, p) });

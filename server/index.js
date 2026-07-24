@@ -11,6 +11,7 @@ const metadata = require('./metadata');
 const jobs = require('./jobs');
 
 const isPdf = (name) => /\.pdf$/i.test(name || '');
+const isHtml = (name) => /\.x?html?$/i.test(name || '');
 const textLength = (s) => String(s || '').replace(/\s/g, '').length;
 
 const app = express();
@@ -56,7 +57,12 @@ async function saveCapture(record, enrichable = jobs.fields) {
 
 // --- API --------------------------------------------------------------------
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', store: store.driver, time: new Date().toISOString() });
+  res.json({
+    status: 'ok',
+    store: store.driver,
+    jobs: jobs.stats(),
+    time: new Date().toISOString(),
+  });
 });
 
 app.get('/sources', asyncRoute(async (req, res) => {
@@ -83,28 +89,53 @@ app.post('/sources', (req, res) => {
       const missing = jobs.fields.filter((f) => !String(supplied[f] || '').trim());
 
       for (const file of files) {
+        // A saved web page ("Save page as…") is a document too — run it through
+        // the same readability pass a captured link gets, instead of storing an
+        // empty record for it.
+        let web = null;
+        if (isHtml(file.originalname)) {
+          // eslint-disable-next-line no-await-in-loop
+          web = await capture.fromHtml(fs.readFileSync(file.path, 'utf8'), {
+            fallbackTitle: file.originalname.replace(/\.x?html?$/i, ''),
+          });
+        }
         // eslint-disable-next-line no-await-in-loop
-        const content = await extractPdfText(file.path);
+        const content = web ? web.content : await extractPdfText(file.path);
         // A scanned/image PDF has no text layer, so pdf-parse comes back empty:
         // OCR it in the background instead of blocking upload.
         const needsOcr = isPdf(file.originalname) && textLength(content) < config.ocr.minChars;
+
+        const values = {
+          title: title || (web && web.title) || file.originalname.replace(/\.pdf$/i, ''),
+          authors: authors || (web ? web.authors : ''),
+          published: published || (web ? web.published : ''),
+        };
+        // A PDF's title defaults to its filename — a placeholder, not a real
+        // title — so enrichment is keyed off what the *user* left blank. A
+        // saved page's extracted title is genuine, so only true blanks count
+        // and the LLM never overwrites what readability already found.
+        const gaps = web
+          ? jobs.fields.filter((f) => !String(values[f] || '').trim())
+          : missing;
         // Enrich missing Title/Authors/Year from the text when a provider exists.
-        const willEnrich = isPdf(file.originalname) && missing.length > 0 && metadata.enabled();
+        const willEnrich = (isPdf(file.originalname) || web)
+          && gaps.length > 0 && metadata.enabled();
         const processing = needsOcr || willEnrich;
         const displayName = course ? `${course} – ${file.originalname}` : file.originalname;
         // eslint-disable-next-line no-await-in-loop
         const record = await store.create({
-          type: isPdf(file.originalname) ? 'pdf' : 'file',
-          title: title || file.originalname.replace(/\.pdf$/i, ''),
-          authors: authors || '',
+          type: web ? 'web' : (isPdf(file.originalname) ? 'pdf' : 'file'),
+          ...values,
           url: url || '',
-          published: published || '',
+          sourceUrl: web ? web.sourceUrl : '',
           fileName: displayName,
           created,
           content,
           status: processing ? 'processing' : 'ready',
         });
-        if (processing) jobs.enqueue(store, record.id, file.path, { needsOcr, content, missing });
+        if (processing) {
+          jobs.enqueue(store, record.id, file.path, { needsOcr, content, missing: gaps });
+        }
         records.push({
           id: record.id, title: record.title, fileName: record.fileName, status: record.status,
         });

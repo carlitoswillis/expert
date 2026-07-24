@@ -72,8 +72,20 @@ const config = {
     // Render resolution. 200dpi is a good accuracy/speed balance for OCR.
     dpi: Number(process.env.OCR_DPI) || 200,
     // If pdf-parse yields fewer than this many non-space chars, treat the PDF
-    // as a scan and fall back to OCR.
-    minChars: Number(process.env.OCR_MIN_CHARS) || 40,
+    // as a scan and fall back to OCR. Scanned papers often carry a small text
+    // layer that isn't the document — a citation stamp ("Sapir (1929)…") or a
+    // rights notice ("from the SAGE Social Science Collections") — which sailed
+    // past the old 40-char threshold and left the body unsearchable. A real
+    // text layer runs to thousands of characters, so erring high is cheap: the
+    // worst case is OCR'ing a genuinely short document.
+    minChars: Number(process.env.OCR_MIN_CHARS) || 250,
+  },
+
+  // Background post-upload work (OCR + metadata). Uploading a folder of 150
+  // papers at once would otherwise fire 150 simultaneous LLM calls and get most
+  // of them rate-limited, so jobs run through a small queue instead.
+  jobs: {
+    concurrency: Number(process.env.JOBS_CONCURRENCY) || 3,
   },
 
   // LLM-assisted metadata: pull Title / Authors / Year out of a source's text
@@ -82,6 +94,11 @@ const config = {
   // cascade (first that answers wins): Gemini → Gemma (both Google's free API
   // via GEMINI_API_KEY) → a local Ollama model.
   metadata: {
+    // Hard off-switch. Bulk imports are the motivating case: the free Gemini
+    // tier allows ~20 requests/day, so enriching a 150-paper folder is both
+    // impossible and a waste of quota. METADATA_ENABLED=0 skips it entirely
+    // and every source lands 'ready' immediately.
+    off: process.env.METADATA_ENABLED === '0',
     geminiKey: process.env.GOOGLE_AI_API_KEY
       || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '',
     // "A higher but free Google LLM" as primary, Gemma as the cheaper fallback.

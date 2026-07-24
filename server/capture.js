@@ -74,6 +74,54 @@ async function rawFetch(url) {
   return { title: title ? collapse(stripHtml(title[1])) : '', content: htmlToText(html) };
 }
 
+// A saved page usually still carries the address it came from.
+const canonicalOf = (html) => {
+  const rel = /<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']+)["']/i.exec(html)
+    || /<meta[^>]+property=["']og:url["'][^>]+content=["']([^"']+)["']/i.exec(html);
+  try {
+    return rel ? parseUrl(rel[1]) : '';
+  } catch {
+    return '';
+  }
+};
+
+/**
+ * Capture an HTML document we already have in hand — a "Save page as" file, or
+ * a page body we fetched ourselves. Same readability-then-raw fallback as
+ * fromUrl, and it recovers the original address from the page's canonical link
+ * so the record still points back at its source.
+ */
+async function fromHtml(html, { url = '', fallbackTitle = '' } = {}) {
+  const sourceUrl = url || canonicalOf(html);
+
+  let article = null;
+  try {
+    const { extractFromHtml } = await loadExtractor();
+    article = await extractFromHtml(html, sourceUrl || undefined);
+  } catch (err) {
+    console.error('[capture] html extraction failed:', err.message);
+  }
+
+  let content = htmlToText(article?.content || '');
+  // Readability found nothing usable — keep the whole page rather than nothing.
+  if (content.length < 200) content = htmlToText(html);
+
+  let title = collapse(article?.title || '');
+  if (!title) {
+    const tag = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+    title = tag ? collapse(stripHtml(tag[1])) : '';
+  }
+
+  return {
+    type: 'web',
+    title: title || fallbackTitle,
+    authors: collapse(article?.author || ''),
+    published: yearOf(article?.published),
+    sourceUrl,
+    content,
+  };
+}
+
 /**
  * Capture a web article. Tries readability extraction first and falls back to
  * the raw page, so a paywalled or unusual page still lands in the library.
@@ -133,4 +181,4 @@ function fromText({ title, text, authors, url } = {}) {
   };
 }
 
-module.exports = { fromUrl, fromText, htmlToText };
+module.exports = { fromUrl, fromHtml, fromText, htmlToText };

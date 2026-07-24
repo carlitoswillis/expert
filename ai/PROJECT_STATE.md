@@ -45,6 +45,25 @@ knowledge, find and combine ideas** — not just academics, not just PDFs.
 - [ ] Optional: switch JSON store to SQLite+FTS5 for larger libraries.
 - [ ] Manual smoke test in a browser (search, edit, delete, upload a real PDF).
 
+## Completed (bulk import — 2026-07-23)
+Ingested `example texts/` (147 PDFs + 1 saved page) — 7.6M chars searchable.
+Everything below was found *by* doing that import, on real data:
+- [x] **Saved HTML files are documents too** — uploading a `.html` now runs the
+      same readability pass a captured link gets (`capture.fromHtml`), and
+      recovers the original address from the page's canonical link. Previously
+      a saved page stored an empty record.
+- [x] **Background job queue** (`JOBS_CONCURRENCY`, default 3). 147 uploads
+      used to enqueue 147 unthrottled jobs and fire that many LLM calls at once.
+- [x] **`METADATA_ENABLED=0`** — the Gemini free tier is **20 requests/day**
+      (not per minute), so enrichment can't touch a bulk import. This skips it
+      instead of stalling every record in `'processing'`.
+- [x] **OCR threshold raised 40 → 250 chars.** Two scans carried only a citation
+      stamp / rights notice as their text layer, cleared the old threshold, and
+      were silently left unsearchable.
+- [x] **Diacritic-insensitive search.** "Pirahã" matched 2 records while
+      "Piraha" matched 6 — either spelling missed most of the library. The JSON
+      store now folds accents like MySQL's collation already did.
+
 ## Completed (v2.1 — 2026-07-23)
 - [x] **Warm reading redesign** of the client (paper bg, serif, soft edges).
 - [x] **Generalized data model**: uploads now write `type`; `type`/`sourceUrl`
