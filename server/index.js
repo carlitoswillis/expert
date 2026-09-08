@@ -28,7 +28,11 @@ const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, config.uploadDir),
     filename: (req, file, cb) => {
-      const safe = file.originalname.replace(/\s+/g, '_');
+      // path.basename strips any directory components a crafted
+      // originalname might carry (e.g. "../../../etc/cron.d/x") — without
+      // it, multer's diskStorage joins this string onto uploadDir verbatim
+      // and a `../` sequence writes outside of it.
+      const safe = path.basename(file.originalname).replace(/\s+/g, '_');
       cb(null, `${Date.now()}-${safe}`);
     },
   }),
@@ -89,9 +93,17 @@ app.get('/sources/:id/file', asyncRoute(async (req, res) => {
   if (!source) return res.status(404).json({ error: 'not found' });
   const file = resolveFile(source);
   if (!file) return res.status(404).json({ error: 'no file stored for this source' });
-  return res.sendFile(file, {
-    headers: { 'Content-Disposition': `inline; filename="${path.basename(file).replace(/"/g, '')}"` },
-  });
+  const name = path.basename(file).replace(/"/g, '');
+  // Force the response type ourselves rather than letting Express derive it
+  // from the extension: an uploaded .html/.svg served `inline` with its own
+  // Content-Type would execute in this app's origin (stored XSS). Only the
+  // in-app PDF reader needs `inline`; everything else downloads as an opaque
+  // attachment.
+  const pdf = isPdf(file);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Type', pdf ? 'application/pdf' : 'application/octet-stream');
+  res.setHeader('Content-Disposition', `${pdf ? 'inline' : 'attachment'}; filename="${name}"`);
+  return res.sendFile(file, { headers: {} });
 }));
 
 app.post('/sources', (req, res) => {
@@ -236,8 +248,11 @@ async function recoverStaleJobs() {
 
 if (require.main === module) {
   recoverStaleJobs().catch((err) => console.error('[jobs] recovery failed:', err.message));
-  app.listen(config.port, () => {
-    console.log(`expert search → http://localhost:${config.port}  (store: ${store.driver})`);
+  // Loopback by default: there's no authN (see ai/PROJECT_STATE.md backlog),
+  // so binding all interfaces would let any other device on the network read,
+  // upload to, or delete the whole library. Opt in explicitly to go wider.
+  app.listen(config.port, config.bindHost, () => {
+    console.log(`expert search → http://${config.bindHost}:${config.port}  (store: ${store.driver})`);
   });
 }
 

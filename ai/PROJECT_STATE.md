@@ -41,7 +41,9 @@ knowledge, find and combine ideas** — not just academics, not just PDFs.
 - [x] Auto-fill Title/Authors/Year from text via LLM cascade (Gemini → Gemma →
       Ollama), background, only fills blank fields. `server/metadata.js`. (2026-06-26)
 - [ ] Automated tests (API + a couple of component tests).
-- [ ] AuthN if ever exposed beyond localhost (currently fully open).
+- [ ] AuthN if ever exposed beyond localhost (currently fully open — the
+      server now binds loopback only by default (`BIND_HOST`), but any
+      process on this machine can still hit every route unauthenticated).
 - [ ] Optional: switch JSON store to SQLite+FTS5 for larger libraries.
 - [ ] Manual smoke test in a browser (search, edit, delete, upload a real PDF).
 

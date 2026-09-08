@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { dataDir } = require('../config');
+const { dataDir, fields } = require('../config');
 
 // Zero-config persistence: a single JSON file on disk. Good enough for local
 // dev and small personal libraries. Mirrors the substring ("LIKE %q%") search
@@ -80,20 +80,27 @@ async function get(id) {
   return sources.find((row) => row.id === Number(id)) || null;
 }
 
+// Allow-list against `config.fields`, same as mysqlStore — otherwise a bare
+// `PUT /sources/:id` (which passes req.body straight through) can write any
+// key the caller likes into the record.
+const allowed = (patch) => Object.fromEntries(
+  Object.entries(patch).filter(([c]) => fields.includes(c)),
+);
+
 async function create(record) {
   const state = load();
-  const row = { ...record, id: state.nextId };
+  const row = { ...allowed(record), id: state.nextId };
   state.sources.push(row);
   state.nextId += 1;
   persist(state);
   return row;
 }
 
-async function update(id, fields) {
+async function update(id, patch) {
   const state = load();
   const row = state.sources.find((r) => r.id === Number(id));
   if (!row) return null;
-  Object.assign(row, fields, { id: row.id });
+  Object.assign(row, allowed(patch), { id: row.id });
   persist(state);
   return row;
 }

@@ -42,6 +42,11 @@ const portFromArgv = () => {
 const config = {
   port: portFromArgv() || Number(process.env.PORT) || 3000,
 
+  // There's no authN (see ai/PROJECT_STATE.md backlog), so default to
+  // loopback-only. Set BIND_HOST=0.0.0.0 (or a LAN address) to opt into wider
+  // exposure deliberately.
+  bindHost: process.env.BIND_HOST || '127.0.0.1',
+
   // Where the new pure-JS pipeline writes uploaded files.
   uploadDir: process.env.UPLOAD_DIR || path.resolve(__dirname, '..', 'uploads'),
 

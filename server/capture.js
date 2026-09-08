@@ -1,3 +1,6 @@
+const dns = require('dns').promises;
+const net = require('net');
+
 const { normalize } = require('./extract');
 
 // Non-PDF capture. Turns a web page or a pasted note into the same shape the
@@ -54,18 +57,75 @@ function parseUrl(raw) {
   return parsed.href;
 }
 
+// SSRF guard: the URL-capture endpoint lets any caller make the server fetch
+// an arbitrary address, so before every fetch we resolve the hostname and
+// reject loopback / RFC1918 / link-local (incl. the 169.254.169.254 cloud
+// metadata address) / CGNAT targets. `rawFetch` re-checks on every redirect
+// hop since a first hop can look public and then bounce somewhere internal.
+function isPrivateIPv4(ip) {
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4 || parts.some((p) => Number.isNaN(p))) return true;
+  const [a, b] = parts;
+  if (a === 0 || a === 10 || a === 127 || a >= 224) return true;
+  if (a === 169 && b === 254) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 100 && b >= 64 && b <= 127) return true;
+  return false;
+}
+
+function isPrivateIPv6(ip) {
+  const value = ip.toLowerCase();
+  if (value === '::1' || value === '::') return true;
+  if (value.startsWith('::ffff:')) return isPrivateIPv4(value.slice(7));
+  if (/^fe[89ab][0-9a-f]:/.test(value)) return true; // link-local fe80::/10
+  if (/^f[cd][0-9a-f]{2}:/.test(value)) return true; // unique local fc00::/7
+  return false;
+}
+
+function isPrivateAddress(ip) {
+  const family = net.isIP(ip);
+  if (family === 4) return isPrivateIPv4(ip);
+  if (family === 6) return isPrivateIPv6(ip);
+  return true; // couldn't tell — refuse rather than risk it
+}
+
+async function assertPublicHost(rawUrl) {
+  const { hostname } = new URL(rawUrl);
+  let addresses;
+  try {
+    addresses = await dns.lookup(hostname, { all: true, verbatim: true });
+  } catch {
+    throw Object.assign(new Error('That URL could not be resolved.'), { status: 400 });
+  }
+  if (!addresses.length || addresses.some((a) => isPrivateAddress(a.address))) {
+    throw Object.assign(new Error('That URL points at a private or local address.'), { status: 400 });
+  }
+}
+
 const yearOf = (value) => {
   const match = /\b(1[5-9]\d{2}|20\d{2})\b/.exec(String(value || ''));
   return match ? match[1] : '';
 };
 
 // Last resort when the readability pass finds no article: take the raw HTML.
-async function rawFetch(url) {
+// Redirects are followed by hand (rather than `redirect: 'follow'`) so each
+// hop can be re-checked by assertPublicHost — a redirect can retarget an
+// already-validated public URL at an internal one.
+async function rawFetch(url, redirectsLeft = 5) {
+  await assertPublicHost(url);
   const res = await fetch(url, {
-    redirect: 'follow',
+    redirect: 'manual',
     headers: { 'user-agent': 'Mozilla/5.0 (compatible; expert/2.1; +local library capture)' },
     signal: AbortSignal.timeout(20000),
   });
+  if ([301, 302, 303, 307, 308].includes(res.status)) {
+    const location = res.headers.get('location');
+    if (!location || redirectsLeft <= 0) {
+      throw Object.assign(new Error('Too many redirects.'), { status: 502 });
+    }
+    return rawFetch(new URL(location, url).href, redirectsLeft - 1);
+  }
   if (!res.ok) {
     throw Object.assign(new Error(`The page returned ${res.status} ${res.statusText}.`), { status: 502 });
   }
@@ -129,7 +189,11 @@ async function fromHtml(html, { url = '', fallbackTitle = '' } = {}) {
  */
 async function fromUrl(rawUrl) {
   const url = parseUrl(rawUrl);
+  await assertPublicHost(url);
 
+  // Note: @extractus/article-extractor does its own fetch (and follows its
+  // own redirects) here, so this only guarantees the *initial* host is
+  // public — rawFetch below is the path that also re-validates every hop.
   let article = null;
   try {
     const { extract } = await loadExtractor();
