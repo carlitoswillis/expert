@@ -17,6 +17,10 @@ npm install --silent >/dev/null 2>&1 && pass "backend deps" || fail "backend ins
 echo "▶ Building client"
 npm run build --silent >/dev/null 2>&1 && pass "client build" || fail "client build"
 
+echo "▶ Unit tests"
+npm test --silent >/tmp/expert-unit-tests.log 2>&1 \
+  && pass "unit tests (server/test)" || { cat /tmp/expert-unit-tests.log; fail "unit tests"; }
+
 echo "▶ Booting server on :$PORT"
 # Point the store at a throwaway dir so smoke tests that create sources never
 # touch the real library.

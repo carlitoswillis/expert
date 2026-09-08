@@ -35,10 +35,17 @@ modern Vite/React-18 client and an Express backend with a pluggable store.
   - `DELETE /sources/:id` — delete.
 - `server/extract.js` — pure-JS PDF text extraction via `pdf-parse`
   (best-effort; never throws).
-- `server/capture.js` — non-PDF capture. Web pages go through
-  `@extractus/article-extractor` (ESM, loaded via dynamic `import` from this
-  CommonJS server) and fall back to raw HTML stripping when readability finds
-  nothing. Produces the same record shape as the upload path.
+- `server/capture.js` — non-PDF capture. It fetches the page itself through
+  `safeFetch` and hands the HTML to `@extractus/article-extractor`'s
+  `extractFromHtml` (ESM, loaded via dynamic `import` from this CommonJS
+  server), falling back to raw HTML stripping when readability finds nothing.
+  Produces the same record shape as the upload path.
+- `server/safeFetch.js` — the only outbound HTTP the server does on behalf of a
+  caller-supplied URL. Drives `http(s).request` directly so redirects are
+  followed one validated hop at a time, and installs the private-address check
+  as the connection's own DNS `lookup`, so the address that is checked is the
+  address that is connected to. Nothing else may fetch a user-supplied URL, and
+  no library may be handed one to fetch for itself.
 - On boot the server settles any record left `'processing'` by a killed
   process — background jobs are in-memory only, so otherwise they'd be
   stranded (dimmed and un-editable) forever.
@@ -55,11 +62,12 @@ Both implement the same interface: `list / get / create / update / remove`.
 - `docker-compose.yml` — optional MySQL 8 with the schema auto-loaded.
 - `.env` / `.env.example` — config (port, DB_*). No DB vars ⇒ JSON store.
 
-### Legacy (not wired into v2) — `process/`, `ocr/`, `node-ppt2pdf-master/`
-The original heavy pipeline: Google Drive upload, PowerPoint→PDF conversion,
-PDF quartile "chopping", and Tesseract OCR for scanned PDFs (via the old
-`pdf-extract`). Kept for reference and as the path for OCR of image-only PDFs.
-See [DECISIONS.md](./DECISIONS.md).
+### Legacy (not wired into v2) — `ocr/`
+Only the OCR Dockerfile survives from the v1 pipeline; it is the sketch of a
+path for OCR of image-only PDFs. `process/` (Google Drive upload, PowerPoint→PDF
+conversion, PDF quartile "chopping") and `node-ppt2pdf-master/` were deleted —
+they were unreferenced and one of them shelled out to a command built by string
+interpolation. See [DECISIONS.md](./DECISIONS.md).
 
 ## Data Flow
 

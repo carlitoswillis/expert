@@ -29,8 +29,13 @@ Read this before editing.
 - **Match the surrounding style**: small functional React components + hooks on
   the client; small focused modules on the server.
 - **Verification first**: run `ai/scripts/verify.sh` before declaring done.
-- **Don't resurrect the legacy pipeline** (`/process`, `/ocr`,
-  `node-ppt2pdf-master`) unless the task is explicitly about OCR / Drive / PPTX.
+- **Don't resurrect the legacy pipeline.** `/process` and `node-ppt2pdf-master`
+  are deleted; only `/ocr` (a Dockerfile) remains, and only for a task that is
+  explicitly about OCR.
+- **Never fetch a caller-supplied URL directly.** `server/safeFetch.js` is the
+  only place the server may open an outbound connection for a URL a request
+  handed it, and no library may be given the URL to fetch for itself — see
+  DECISIONS.md.
 
 ## How to Navigate This Workspace (Priority Flow)
 1. **START HERE**: `PROJECT_STATE.md` — current focus, active tasks, backlog.

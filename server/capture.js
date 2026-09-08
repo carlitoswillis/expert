@@ -1,7 +1,5 @@
-const dns = require('dns').promises;
-const net = require('net');
-
 const { normalize } = require('./extract');
+const { safeFetch, decodeBody, parseHttpUrl } = require('./safeFetch');
 
 // Non-PDF capture. Turns a web page or a pasted note into the same shape the
 // upload path produces, so everything downstream (store, search, metadata
@@ -45,62 +43,7 @@ const htmlToText = (html) => normalize(stripHtml(html));
 // Only http(s) — no file://, no data: — and normalized so the store gets a
 // canonical origin.
 function parseUrl(raw) {
-  let parsed;
-  try {
-    parsed = new URL(String(raw || '').trim());
-  } catch {
-    throw Object.assign(new Error('That doesn\'t look like a URL.'), { status: 400 });
-  }
-  if (!/^https?:$/.test(parsed.protocol)) {
-    throw Object.assign(new Error('Only http and https links can be captured.'), { status: 400 });
-  }
-  return parsed.href;
-}
-
-// SSRF guard: the URL-capture endpoint lets any caller make the server fetch
-// an arbitrary address, so before every fetch we resolve the hostname and
-// reject loopback / RFC1918 / link-local (incl. the 169.254.169.254 cloud
-// metadata address) / CGNAT targets. `rawFetch` re-checks on every redirect
-// hop since a first hop can look public and then bounce somewhere internal.
-function isPrivateIPv4(ip) {
-  const parts = ip.split('.').map(Number);
-  if (parts.length !== 4 || parts.some((p) => Number.isNaN(p))) return true;
-  const [a, b] = parts;
-  if (a === 0 || a === 10 || a === 127 || a >= 224) return true;
-  if (a === 169 && b === 254) return true;
-  if (a === 172 && b >= 16 && b <= 31) return true;
-  if (a === 192 && b === 168) return true;
-  if (a === 100 && b >= 64 && b <= 127) return true;
-  return false;
-}
-
-function isPrivateIPv6(ip) {
-  const value = ip.toLowerCase();
-  if (value === '::1' || value === '::') return true;
-  if (value.startsWith('::ffff:')) return isPrivateIPv4(value.slice(7));
-  if (/^fe[89ab][0-9a-f]:/.test(value)) return true; // link-local fe80::/10
-  if (/^f[cd][0-9a-f]{2}:/.test(value)) return true; // unique local fc00::/7
-  return false;
-}
-
-function isPrivateAddress(ip) {
-  const family = net.isIP(ip);
-  if (family === 4) return isPrivateIPv4(ip);
-  if (family === 6) return isPrivateIPv6(ip);
-  return true; // couldn't tell — refuse rather than risk it
-}
-
-async function assertPublicHost(rawUrl) {
-  const { hostname } = new URL(rawUrl);
-  let addresses;
-  try {
-    addresses = await dns.lookup(hostname, { all: true, verbatim: true });
-  } catch {
-    throw Object.assign(new Error('That URL could not be resolved.'), { status: 400 });
-  }
-  if (!addresses.length || addresses.some((a) => isPrivateAddress(a.address))) {
-    throw Object.assign(new Error('That URL points at a private or local address.'), { status: 400 });
-  }
+  return parseHttpUrl(raw).href;
 }
 
 const yearOf = (value) => {
@@ -108,30 +51,13 @@ const yearOf = (value) => {
   return match ? match[1] : '';
 };
 
-// Last resort when the readability pass finds no article: take the raw HTML.
-// Redirects are followed by hand (rather than `redirect: 'follow'`) so each
-// hop can be re-checked by assertPublicHost — a redirect can retarget an
-// already-validated public URL at an internal one.
-async function rawFetch(url, redirectsLeft = 5) {
-  await assertPublicHost(url);
-  const res = await fetch(url, {
-    redirect: 'manual',
-    headers: { 'user-agent': 'Mozilla/5.0 (compatible; expert/2.1; +local library capture)' },
-    signal: AbortSignal.timeout(20000),
-  });
-  if ([301, 302, 303, 307, 308].includes(res.status)) {
-    const location = res.headers.get('location');
-    if (!location || redirectsLeft <= 0) {
-      throw Object.assign(new Error('Too many redirects.'), { status: 502 });
-    }
-    return rawFetch(new URL(location, url).href, redirectsLeft - 1);
-  }
-  if (!res.ok) {
-    throw Object.assign(new Error(`The page returned ${res.status} ${res.statusText}.`), { status: 502 });
-  }
-  const html = await res.text();
-  const title = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
-  return { title: title ? collapse(stripHtml(title[1])) : '', content: htmlToText(html) };
+// The one place this module touches the network. Every hop is validated at its
+// own socket by safeFetch, and the extractor is never handed a URL — it only
+// ever sees HTML we fetched ourselves — so no library gets to follow a redirect
+// on our behalf.
+async function fetchPage(url) {
+  const res = await safeFetch(url);
+  return { html: decodeBody(res.body, res.headers['content-type']), url: res.url };
 }
 
 // A saved page usually still carries the address it came from.
@@ -183,45 +109,23 @@ async function fromHtml(html, { url = '', fallbackTitle = '' } = {}) {
 }
 
 /**
- * Capture a web article. Tries readability extraction first and falls back to
- * the raw page, so a paywalled or unusual page still lands in the library.
+ * Capture a web article. Fetches the page through the SSRF-guarded fetcher,
+ * then runs the same readability-then-raw pass as fromHtml, so a paywalled or
+ * unusual page still lands in the library.
  * Returns a record ready for store.create(), minus server-managed fields.
  */
 async function fromUrl(rawUrl) {
   const url = parseUrl(rawUrl);
-  await assertPublicHost(url);
-
-  // Note: @extractus/article-extractor does its own fetch (and follows its
-  // own redirects) here, so this only guarantees the *initial* host is
-  // public — rawFetch below is the path that also re-validates every hop.
-  let article = null;
-  try {
-    const { extract } = await loadExtractor();
-    article = await extract(url, {}, { signal: AbortSignal.timeout(20000) });
-  } catch (err) {
-    console.error('[capture] article extraction failed for', url, '-', err.message);
-  }
-
-  let title = collapse(article?.title || '');
-  let content = htmlToText(article?.content || '');
-  const authors = collapse(article?.author || '');
-  const published = yearOf(article?.published);
-
-  // Readability can return an empty shell on JS-heavy or gated pages.
-  if (content.length < 200) {
-    const raw = await rawFetch(url);
-    if (raw.content.length > content.length) content = raw.content;
-    if (!title) title = raw.title;
-  }
+  const page = await fetchPage(url);
+  // Relative links resolve against where the body really came from; the record
+  // still points at the address the user asked for.
+  const record = await fromHtml(page.html, { url: page.url || url });
 
   return {
-    type: 'web',
-    title: title || new URL(url).hostname,
-    authors,
-    published,
+    ...record,
+    title: record.title || new URL(url).hostname,
     sourceUrl: url,
     fileName: '',
-    content,
   };
 }
 

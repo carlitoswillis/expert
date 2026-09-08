@@ -3,6 +3,38 @@
 Why things are the way they are. Don't silently reverse these — if you change
 one, update this file.
 
+## 2026-09-07 — SSRF guard moved to the socket (`server/safeFetch.js`)
+
+### The check belongs at the connection, not at the URL
+`POST /sources/url` lets an unauthenticated caller choose an address the server
+will fetch, so the capture path is an SSRF primitive. The first attempt at a
+guard validated the URL string and then let
+`@extractus/article-extractor` fetch it. That does not hold, for two reasons,
+and both were exploitable:
+
+- **The fetch wasn't ours.** The extractor calls bare `fetch(url, …)`, which
+  defaults to `redirect: 'follow'`. A public host answering `302 Location:
+  http://169.254.169.254/…` walked straight past a guard that had only ever
+  seen the first URL. Reproduced against a local 302 into an internal service.
+- **The name was resolved twice.** Resolving a hostname to a public address and
+  then handing the *hostname* to the transport lets it resolve again; a
+  short-TTL record answers public for the check and private for the connection
+  (DNS rebinding). Also reproduced.
+
+So `server/safeFetch.js` owns every outbound request for a caller-supplied URL:
+it drives `http(s).request` itself, follows redirects by hand (one validated
+request per hop, protocol re-checked each time, capped at 5), and passes a
+`lookup` that rejects internal answers — meaning the check runs *inside* the
+connection's own DNS resolution and there is no window between checking an
+address and connecting to it. A bare IP in the URL never reaches that lookup, so
+it is classified before the request. IPv6 is allow-listed (only `2000::/3`
+global unicast), with 6to4 and NAT64 judged by the IPv4 address they carry.
+
+Consequence to keep in mind: **no library may be given a user-supplied URL to
+fetch.** Pass it the bytes instead — `extractFromHtml(html, url)`, not
+`extract(url)`. Regression tests in `server/test/capture-ssrf.test.js`; they run
+as part of `npm test` and `ai/scripts/verify.sh`.
+
 ## 2026-06-26 — OCR fallback for scanned PDFs (re-added)
 
 ### Scanned/image PDFs now OCR'd with a pure-WASM pipeline
@@ -115,11 +147,12 @@ handles text-based PDFs. Trade-off: it does **not** OCR scanned/image PDFs;
 those land with empty `content`. The legacy OCR pipeline remains the answer for
 that (see backlog).
 
-### Legacy pipeline kept, not wired in
-`/process` (Google Drive upload, PPTX→PDF, PDF "chopping"), `/ocr`, and
-`node-ppt2pdf-master` are left in place for reference but are not imported by the
-v2 server. They need external creds/binaries and weren't part of the "make it
-run + look better" goal. Remove or modernize deliberately later.
+### Legacy pipeline deleted, except the OCR Dockerfile
+`/process` (Google Drive upload, PPTX→PDF, PDF "chopping") and
+`node-ppt2pdf-master` were kept "for reference" for a while, imported by nothing.
+They are now deleted: dead code that shells out to an interpolated command is a
+liability, not a reference. `/ocr` (a Dockerfile only) stays as the sketch of an
+answer for scanned PDFs.
 
 ### Records store extracted text + metadata, not the original file
 v1 pushed originals to Google Drive and linked them. v2 (so far) keeps only
