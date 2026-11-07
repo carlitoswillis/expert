@@ -1,3 +1,5 @@
+> **Retired.** This project is folded into the private `AIA2ndBrain` repo: OCR and capture now live in the vault watcher, and the vault is the only memory store. This repo stays as reference code only.
+
 # expert search
 
 A focused knowledge tool: capture sources you read, extract their full text, and
